@@ -1,0 +1,68 @@
+using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
+using MiniPos.Domain.Catalog;
+using MiniPos.Domain.Common;
+using MiniPos.Domain.Companies;
+using MiniPos.Domain.Sales;
+using MiniPos.Infrastructure.Tenancy;
+
+namespace MiniPos.Infrastructure.Persistence;
+
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext tenant) : DbContext(options)
+{
+    public DbSet<Company> Companies => Set<Company>();
+
+    public DbSet<Product> Products => Set<Product>();
+
+    public DbSet<Sale> Sales => Set<Sale>();
+
+    /// <summary>Read by the global query filters below, per DbContext instance (i.e. per request).</summary>
+    public Guid CurrentCompanyId => tenant.CompanyId;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        modelBuilder.Entity<Company>(b =>
+        {
+            b.Property(c => c.NameEn).HasMaxLength(200);
+            b.Property(c => c.NameAr).HasMaxLength(200);
+            b.Property(c => c.VatNumber).HasMaxLength(15);
+        });
+
+        modelBuilder.Entity<Product>(b =>
+        {
+            b.Property(p => p.NameEn).HasMaxLength(200);
+            b.Property(p => p.NameAr).HasMaxLength(200);
+            b.Property(p => p.Sku).HasMaxLength(64);
+            b.HasIndex(p => new { p.CompanyId, p.Sku }).IsUnique();
+        });
+
+        modelBuilder.Entity<Sale>(b =>
+        {
+            b.HasIndex(s => new { s.CompanyId, s.Number }).IsUnique();
+            b.OwnsMany(s => s.Lines, l =>
+            {
+                l.WithOwner().HasForeignKey("SaleId");
+                l.Property(x => x.ProductNameEn).HasMaxLength(200);
+                l.Property(x => x.ProductNameAr).HasMaxLength(200);
+                l.Ignore(x => x.LineNetHalalas);
+            });
+        });
+
+        // Multi-tenancy, read side: every ITenantScoped entity only ever returns the current company's rows.
+        foreach (var entity in modelBuilder.Model.GetEntityTypes()
+                     .Where(e => typeof(ITenantScoped).IsAssignableFrom(e.ClrType) && e.BaseType is null))
+        {
+            modelBuilder.Entity(entity.ClrType).HasQueryFilter(TenantFilter(entity.ClrType));
+        }
+    }
+
+    private LambdaExpression TenantFilter(Type type)
+    {
+        var e = Expression.Parameter(type, "e");
+        var companyId = Expression.Property(e, nameof(ITenantScoped.CompanyId));
+        var current = Expression.Property(Expression.Constant(this), nameof(CurrentCompanyId));
+        return Expression.Lambda(Expression.Equal(companyId, current), e);
+    }
+}
