@@ -1,5 +1,6 @@
 using MediatR;
 using MiniPos.Domain.Common;
+using MiniPos.Api.Features.Common;
 
 namespace MiniPos.Api.Features.Catalog.CreateProduct;
 

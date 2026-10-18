@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using MiniPos.Api.Features.Catalog.CreateProduct;
+using MiniPos.Api.Features.Common;
 using MiniPos.Infrastructure.Persistence;
 
 namespace MiniPos.Api.Features.Catalog.ListProducts;
