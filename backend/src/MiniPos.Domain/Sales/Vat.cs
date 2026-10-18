@@ -13,6 +13,6 @@ public static class Vat
             throw new ArgumentOutOfRangeException(nameof(netHalalas), "Net amount cannot be negative.");
         }
 
-        return netHalalas * RatePercent / 100;
+        return (netHalalas * RatePercent + 50) / 100;
     }
 }
