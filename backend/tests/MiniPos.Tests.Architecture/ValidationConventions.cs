@@ -36,6 +36,23 @@ public class ValidationConventions
         }
     }
 
+    [Theory]
+    [MemberData(nameof(Validators))]
+    public void Name_rules_reject_bidi_controls(Type validatorType)
+    {
+        var validator = (IValidator)Activator.CreateInstance(validatorType)!;
+        var descriptor = validator.CreateDescriptor();
+        foreach (var member in descriptor.GetMembersWithValidators().Select(g => g.Key)
+                     .Where(m => m.EndsWith("Name", StringComparison.Ordinal) ||
+                                 m.EndsWith("NameEn", StringComparison.Ordinal) ||
+                                 m.EndsWith("NameAr", StringComparison.Ordinal)))
+        {
+            var rules = descriptor.GetValidatorsForMember(member).Select(v => v.Validator.GetType().Name);
+            rules.Should().Contain(n => n.StartsWith("NoBidiControlsValidator", StringComparison.Ordinal),
+                $"{validatorType.Name}.{member} must use TextRules.NoBidiControls()");
+        }
+    }
+
     [Fact]
     public void There_are_validators_to_check() => Validators().Count.Should().BePositive();
 }
