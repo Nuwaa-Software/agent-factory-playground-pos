@@ -17,6 +17,30 @@ public class InvoiceQrTests
             (1, "Acme Store"), (2, "310122393500003"), (3, "2026-01-02T03:04:05Z"), (4, "115.00"), (5, "15.00"));
     }
 
+    [Fact]
+    public void Encodes_arabic_seller_name()
+    {
+        var qr = InvoiceQr.Encode("متجر الأناقة", "310122393500003", new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero),
+            11500, 1500);
+
+        var records = Decode(qr);
+
+        records.Should().Equal(
+            (1, "متجر الأناقة"), (2, "310122393500003"), (3, "2026-01-02T03:04:05Z"), (4, "115.00"), (5, "15.00"));
+    }
+
+    [Fact]
+    public void Encodes_mixed_arabic_english_seller_name()
+    {
+        var qr = InvoiceQr.Encode("Acme متجر", "310122393500003", new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero),
+            11500, 1500);
+
+        var records = Decode(qr);
+
+        records.Should().Equal(
+            (1, "Acme متجر"), (2, "310122393500003"), (3, "2026-01-02T03:04:05Z"), (4, "115.00"), (5, "15.00"));
+    }
+
     [Theory]
     [InlineData(0, "0.00")]
     [InlineData(5, "0.05")]

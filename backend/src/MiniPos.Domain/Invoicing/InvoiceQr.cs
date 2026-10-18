@@ -29,7 +29,7 @@ public static class InvoiceQr
     {
         var bytes = Encoding.UTF8.GetBytes(value);
         buffer.WriteByte(tag);
-        buffer.WriteByte((byte)value.Length);
+        buffer.WriteByte((byte)bytes.Length);
         buffer.Write(bytes);
     }
 }
