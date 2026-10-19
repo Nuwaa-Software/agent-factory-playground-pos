@@ -11,7 +11,7 @@ public sealed class GetSaleHandler(AppDbContext db) : IRequestHandler<GetSaleQue
     {
         ArgumentNullException.ThrowIfNull(request);
         // Lines are an owned collection; load the sale with them in one query.
-        var sale = await db.Sales.IgnoreQueryFilters().SingleOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
+        var sale = await db.Sales.SingleOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
         if (sale is null)
         {
             return new Error("sale.not_found", "Sale not found.", ErrorKind.NotFound);

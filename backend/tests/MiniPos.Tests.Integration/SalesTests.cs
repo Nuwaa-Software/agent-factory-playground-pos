@@ -120,4 +120,33 @@ public class SalesTests(PostgresFixture db) : ApiTestBase(db)
         var response = await client.GetAsync($"/api/pos/sales/{Guid.NewGuid()}/receipt");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task Cross_tenant_sale_read_returns_404()
+    {
+        // Create two companies
+        var companyA = await Factory.CreateCompanyAsync("A", "أ");
+        var companyB = await Factory.CreateCompanyAsync("B", "ب");
+        
+        // Create a product in company A
+        var clientA = Factory.ClientFor(companyA);
+        var productResponse = await clientA.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 5000, 10));
+        productResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var product = (await productResponse.Content.ReadFromJsonAsync<ProductResponse>())!;
+        
+        // Create a sale in company A
+        var saleResponse = await clientA.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+        saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createdSale = (await saleResponse.Content.ReadFromJsonAsync<SaleResponse>())!;
+        
+        // Company B tries to read the sale from company A - should return 404
+        var responseB = await Factory.ClientFor(companyB).GetAsync($"/api/pos/sales/{createdSale.Id}");
+        responseB.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        
+        // Company A should be able to read its own sale
+        var responseA = await clientA.GetAsync($"/api/pos/sales/{createdSale.Id}");
+        responseA.IsSuccessStatusCode.Should().BeTrue();
+    }
 }
