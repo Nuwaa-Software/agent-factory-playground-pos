@@ -1,4 +1,5 @@
 using MiniPos.Domain.Common;
+using System.ComponentModel.DataAnnotations;
 
 namespace MiniPos.Domain.Catalog;
 
@@ -17,5 +18,6 @@ public sealed class Product : ITenantScoped
     /// <summary>Net unit price (VAT excluded) in halalas (1 SAR = 100 halalas). Money is never a float.</summary>
     public long PriceHalalas { get; set; }
 
+    [ConcurrencyCheck]
     public int Stock { get; set; }
 }
