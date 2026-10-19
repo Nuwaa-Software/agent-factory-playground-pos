@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using MiniPos.Api.Features.Catalog.CreateProduct;
 using MiniPos.Api.Features.Sales.CreateSale;
 using MiniPos.Api.Features.Sales.GetSale;
+using MiniPos.Api.Features.Sales.GetReceipt;
 
 namespace MiniPos.Tests.Integration;
 
@@ -60,6 +61,64 @@ public class SalesTests(PostgresFixture db) : ApiTestBase(db)
         var (client, _) = await ShopWithProductAsync();
         var response = await client.PostAsJsonAsync("/api/pos/sales", new CreateSaleCommand([]));
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Receipt_returns_correct_format()
+    {
+        var (client, product) = await ShopWithProductAsync(price: 1000, stock: 10);
+        var created = await (await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 2)]))).Content.ReadFromJsonAsync<SaleResponse>();
+
+        var response = await client.GetAsync($"/api/pos/sales/{created!.Id}/receipt");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/plain");
+
+        var receipt = await response.Content.ReadAsStringAsync();
+        receipt.Should().Contain("Shirt / قميص");
+        receipt.Should().Contain("2 x Shirt / قميص  20.00");
+        receipt.Should().Contain("Net: 20.00");
+        receipt.Should().Contain("VAT 15%: 3.00");
+        receipt.Should().Contain("Total: 23.00");
+    }
+
+    [Fact]
+    public async Task Viewer_gets_403()
+    {
+        var (client, product) = await ShopWithProductAsync();
+        var created = await (await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]))).Content.ReadFromJsonAsync<SaleResponse>();
+
+        var viewerClient = Factory.ClientFor(await Factory.CreateCompanyAsync(), "Viewer");
+        var response = await viewerClient.GetAsync($"/api/pos/sales/{created!.Id}/receipt");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Another_company_sale_returns_404()
+    {
+        var companyA = await Factory.CreateCompanyAsync();
+        var companyB = await Factory.CreateCompanyAsync();
+        var clientA = Factory.ClientFor(companyA);
+        var clientB = Factory.ClientFor(companyB);
+
+        var response = await clientA.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product = (await response.Content.ReadFromJsonAsync<ProductResponse>())!;
+
+        var created = await (await clientA.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]))).Content.ReadFromJsonAsync<SaleResponse>();
+
+        var responseB = await clientB.GetAsync($"/api/pos/sales/{created!.Id}/receipt");
+        responseB.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Non_existent_sale_returns_404()
+    {
+        var (client, _) = await ShopWithProductAsync();
+        var response = await client.GetAsync($"/api/pos/sales/{Guid.NewGuid()}/receipt");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
