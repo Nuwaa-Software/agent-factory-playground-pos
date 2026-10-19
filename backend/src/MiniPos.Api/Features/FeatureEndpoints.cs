@@ -7,6 +7,7 @@ public static class FeatureEndpoints
     {
         Catalog.CreateProduct.Endpoint.Map(app);
         Catalog.ListProducts.Endpoint.Map(app);
+        Catalog.UpdateProduct.Endpoint.Map(app);
         Sales.CreateSale.Endpoint.Map(app);
         Sales.GetSale.Endpoint.Map(app);
     }
