@@ -4,6 +4,7 @@ using MiniPos.Domain.Catalog;
 using MiniPos.Domain.Common;
 using MiniPos.Domain.Companies;
 using MiniPos.Domain.Sales;
+using MiniPos.Domain.Shifts;
 using MiniPos.Infrastructure.Tenancy;
 
 namespace MiniPos.Infrastructure.Persistence;
@@ -15,6 +16,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<Sale> Sales => Set<Sale>();
+
+    public DbSet<Shift> Shifts => Set<Shift>();
 
     /// <summary>Read by the global query filters below, per DbContext instance (i.e. per request).</summary>
     public Guid CurrentCompanyId => tenant.CompanyId;
@@ -48,6 +51,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
                 l.Property(x => x.ProductNameAr).HasMaxLength(200);
                 l.Ignore(x => x.LineNetHalalas);
             });
+        });
+
+        modelBuilder.Entity<Shift>(b =>
+        {
+            b.Property(s => s.CashierName).HasMaxLength(100);
+            b.HasIndex(s => new { s.CompanyId, s.OpenedAt }).IsDescending();
         });
 
         // Multi-tenancy, read side: every ITenantScoped entity only ever returns the current company's rows.
