@@ -20,6 +20,10 @@ public sealed class Sale : ITenantScoped
     public long VatHalalas { get; set; }
 
     public long TotalHalalas { get; set; }
+    
+    public bool Voided { get; set; }
+
+    public DateTimeOffset? VoidedAt { get; set; }
 }
 
 public sealed class SaleLine
