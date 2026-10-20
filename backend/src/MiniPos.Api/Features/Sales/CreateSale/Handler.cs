@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MiniPos.Api.Features.Sales.GetSale;
+using MiniPos.Domain.Catalog;
 using MiniPos.Domain.Common;
 using MiniPos.Domain.Sales;
 using MiniPos.Infrastructure.Persistence;
@@ -48,7 +49,15 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         sale.Number = (await db.Sales.MaxAsync(s => (int?)s.Number, cancellationToken) ?? 0) + 1;
 
         db.Sales.Add(sale);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex) when (ex.Entries.Any(e => e.Entity is Product))
+        {
+            return Result<SaleResponse>.Failure(
+                new Error("sale.stock_conflict", "Stock changed while processing this sale. Please retry.", ErrorKind.Conflict));
+        }
         LogSaleCreated(logger, sale.Number, sale.TotalHalalas);
 
         var company = await db.Companies.SingleAsync(c => c.Id == tenant.CompanyId, cancellationToken);
