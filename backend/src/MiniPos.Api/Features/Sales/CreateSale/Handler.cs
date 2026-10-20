@@ -46,7 +46,10 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         sale.NetHalalas = sale.Lines.Sum(l => l.LineNetHalalas);
         sale.VatHalalas = Vat.Compute(sale.NetHalalas);
         sale.TotalHalalas = sale.NetHalalas + sale.VatHalalas;
-        sale.Number = (await db.Sales.MaxAsync(s => (int?)s.Number, cancellationToken) ?? 0) + 1;
+        
+        // Use a more robust approach to assign sale numbers that handles concurrency
+        var maxNumber = await db.Sales.Where(s => s.CompanyId == tenant.CompanyId).MaxAsync(s => (int?)s.Number, cancellationToken);
+        sale.Number = (maxNumber ?? 0) + 1;
 
         db.Sales.Add(sale);
         try
@@ -57,6 +60,12 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         {
             return Result<SaleResponse>.Failure(
                 new Error("sale.stock_conflict", "Stock changed while processing this sale. Please retry.", ErrorKind.Conflict));
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pgEx && pgEx.SqlState == "23505")
+        {
+            // Handle the unique constraint violation for sale number
+            return Result<SaleResponse>.Failure(
+                new Error("sale.number_conflict", "Another sale was created at the same time. Please retry.", ErrorKind.Conflict));
         }
         LogSaleCreated(logger, sale.Number, sale.TotalHalalas);
 
