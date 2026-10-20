@@ -4,6 +4,8 @@ using MiniPos.Api.Features.Catalog.CreateProduct;
 using MiniPos.Api.Features.Sales.CreateSale;
 using MiniPos.Api.Features.Sales.GetSale;
 using MiniPos.Api.Features.Sales.GetReceipt;
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MiniPos.Tests.Integration;
 
@@ -148,5 +150,29 @@ public class SalesTests(PostgresFixture db) : ApiTestBase(db)
         // Company A should be able to read its own sale
         var responseA = await clientA.GetAsync($"/api/pos/sales/{createdSale.Id}");
         responseA.IsSuccessStatusCode.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Concurrent_sales_of_same_product_one_201_one_409()
+    {
+        // Create a product with stock = 1
+        var (client, product) = await ShopWithProductAsync(stock: 1);
+        
+        // Fire two sales requests in parallel
+        var task1 = client.PostAsJsonAsync("/api/pos/sales", new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+        var task2 = client.PostAsJsonAsync("/api/pos/sales", new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+        
+        var responses = await Task.WhenAll(task1, task2);
+        
+        // Exactly one should succeed (201) and one should fail (409)
+        var createdResponse = responses.FirstOrDefault(r => r.StatusCode == HttpStatusCode.Created);
+        var conflictResponse = responses.FirstOrDefault(r => r.StatusCode == HttpStatusCode.Conflict);
+        
+        createdResponse.Should().NotBeNull();
+        conflictResponse.Should().NotBeNull();
+        
+        // Verify final stock is exactly 0
+        var products = await client.GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products");
+        products!.Single().Stock.Should().Be(0);
     }
 }
