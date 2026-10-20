@@ -20,6 +20,8 @@ public sealed class Sale : ITenantScoped
     public long VatHalalas { get; set; }
 
     public long TotalHalalas { get; set; }
+
+    public PaymentType PaymentType { get; set; } = PaymentType.Cash;
 }
 
 public sealed class SaleLine
