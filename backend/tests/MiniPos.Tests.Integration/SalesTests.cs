@@ -178,6 +178,95 @@ public class SalesTests(PostgresFixture db) : ApiTestBase(db)
     }
 
     [Fact]
+    public async Task Void_sale_returns_200_with_voided_true()
+    {
+        // Create a company and product
+        var (client, product) = await ShopWithProductAsync();
+        
+        // Create a sale
+        var created = await (await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]))).Content.ReadFromJsonAsync<SaleResponse>();
+        
+        // Void the sale
+        var response = await client.PatchAsync($"/api/pos/sales/{created!.Id}/void", null);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        
+        var voidedSale = await response.Content.ReadFromJsonAsync<SaleResponse>();
+        voidedSale!.Voided.Should().BeTrue();
+        voidedSale.VoidedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Void_sale_requires_admin_cashier_gets_403()
+    {
+        // Create a company and product
+        var (client, product) = await ShopWithProductAsync();
+        
+        // Create a sale
+        var created = await (await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]))).Content.ReadFromJsonAsync<SaleResponse>();
+        
+        // Try to void with cashier role - should get 403
+        var cashierClient = Factory.ClientFor(await Factory.CreateCompanyAsync(), "Cashier");
+        var response = await cashierClient.PatchAsync($"/api/pos/sales/{created!.Id}/void", null);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Void_sale_requires_admin_viewer_gets_403()
+    {
+        // Create a company and product
+        var (client, product) = await ShopWithProductAsync();
+        
+        // Create a sale
+        var created = await (await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]))).Content.ReadFromJsonAsync<SaleResponse>();
+        
+        // Try to void with viewer role - should get 403
+        var viewerClient = Factory.ClientFor(await Factory.CreateCompanyAsync(), "Viewer");
+        var response = await viewerClient.PatchAsync($"/api/pos/sales/{created!.Id}/void", null);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Void_cross_tenant_sale_returns_404()
+    {
+        // Create two companies
+        var companyA = await Factory.CreateCompanyAsync("A", "أ");
+        var companyB = await Factory.CreateCompanyAsync("B", "ب");
+        
+        // Create a product in company A
+        var clientA = Factory.ClientFor(companyA);
+        var productResponse = await clientA.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 5000, 10));
+        productResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var product = (await productResponse.Content.ReadFromJsonAsync<ProductResponse>())!;
+        
+        // Create a sale in company A
+        var saleResponse = await clientA.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+        saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createdSale = (await saleResponse.Content.ReadFromJsonAsync<SaleResponse>())!;
+        
+        // Company B tries to void the sale from company A - should return 404
+        var responseB = await Factory.ClientFor(companyB).PatchAsync($"/api/pos/sales/{createdSale.Id}/void", null);
+        responseB.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Void_non_existent_sale_returns_404()
+    {
+        // Try to void a non-existent sale - should return 404
+        var (client, _) = await ShopWithProductAsync();
+        var response = await client.PatchAsync($"/api/pos/sales/{Guid.NewGuid()}/void", null);
+        
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Default_payment_type_is_Cash()
     {
         var (client, product) = await ShopWithProductAsync();
