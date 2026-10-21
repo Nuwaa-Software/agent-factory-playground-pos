@@ -1,0 +1,25 @@
+{
+  "app": { "name": "ميني بوس", "mainNav": "التنقل الرئيسي" },
+  "nav": { "products": "المنتجات", "signOut": "تسجيل الخروج" },
+  "language": { "switchTo": "English" },
+  "common": { "loading": "جارٍ التحميل…", "retry": "إعادة المحاولة" },
+  "money": { "sar": "{{amount}} ر.س" },
+  "signIn": {
+    "title": "تسجيل الدخول (بيئة التطوير)",
+    "companyId": "معرّف الشركة",
+    "companyIdHint": "المعرّف الفريد للشركة، مثل 3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+    "companyIdInvalid": "أدخل معرّف شركة صحيحًا (GUID).",
+    "role": "الدور",
+    "submit": "دخول"
+  },
+  "roles": { "Admin": "مدير", "Cashier": "كاشير", "Viewer": "مشاهد" },
+  "products": {
+    "title": "المنتجات",
+    "name": "الاسم",
+    "sku": "رمز المنتج",
+    "price": "السعر",
+    "stock": "المخزون",
+    "empty": "لا توجد منتجات بعد.",
+    "loadError": "تعذّر تحميل المنتجات."
+  }
+}

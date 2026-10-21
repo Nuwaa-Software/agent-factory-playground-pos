@@ -1,7 +1,8 @@
 # MiniPos — instructions for AI agents
 
 A small multi-tenant POS (point of sale) built **exactly like nuwaa-pos**: .NET 10 vertical slices,
-EF Core + PostgreSQL, Saudi VAT, ZATCA-style invoice QR, Arabic + English. It is a training ground
+EF Core + PostgreSQL, Saudi VAT, ZATCA-style invoice QR, Arabic + English, and a React + TypeScript web
+frontend. It is a training ground
 for the Agent Factory before it works on the real nuwaa-pos.
 
 ## Build & test
@@ -13,8 +14,10 @@ for the Agent Factory before it works on the real nuwaa-pos.
 | Unit only | `dotnet test backend/tests/MiniPos.Tests.Unit` |
 | Architecture rules | `dotnet test backend/tests/MiniPos.Tests.Architecture` |
 | Integration | `dotnet test backend/tests/MiniPos.Tests.Integration` — needs Postgres: set `MINIPOS_TEST_DB` to a server connection string (the agent sandbox does this), otherwise Testcontainers starts one (needs Docker) |
+| Frontend: everything | `cd frontend && npm ci && npm run check` — type check, lint, tests, production build |
+| Frontend tests only | `cd frontend && npx vitest run` (one file: `npx vitest run src/pages/ProductsPage.test.tsx`) |
 
-A change is done only when the build has **no warnings** and **all** tests pass.
+A change is done only when the build has **no warnings** and **all** tests pass — backend and frontend.
 
 ## Layout
 
@@ -22,6 +25,10 @@ A change is done only when the build has **no warnings** and **all** tests pass.
 - `backend/src/MiniPos.Infrastructure` — EF Core `AppDbContext`, tenant context. Never references the Api.
 - `backend/src/MiniPos.Api` — Minimal APIs, one folder per slice: `Features/<Area>/<Slice>/{Request,Validator,Handler,Endpoint}.cs`. Register new slices in `Features/FeatureEndpoints.cs`.
 - `backend/tests/` — `Unit`, `Integration` (real Postgres via `WebApplicationFactory`), `Architecture` (convention tests).
+- `frontend/` — React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, React Router, i18next; tests with
+  Vitest + Testing Library + vitest-axe. `src/pages/` one file per screen (+ its `.test.tsx`), `src/components/`
+  shared pieces, `src/api/` API calls and their types (mirror the backend's response records), `src/lib/`
+  pure helpers, `src/locales/{ar,en}.json` all texts, `src/test/` test helpers.
 
 ## Conventions (each one exists because of a real bug class — keep them)
 
@@ -61,3 +68,25 @@ A change is done only when the build has **no warnings** and **all** tests pass.
 - Every bug fix or feature includes tests (unit and/or integration) that fail before the change.
 - Never edit generated files, `bin/` or `obj/`. Don't add NuGet packages unless the issue asks.
 - Branch: `agent/<issue-number>-<short-slug>`. Never push to `main`.
+
+## Frontend conventions
+
+1. **Arabic first, right-to-left.** Arabic is the default language. Every user-visible text is a key in
+   **both** `src/locales/ar.json` and `src/locales/en.json` — never hard-coded in a component
+   (`locales.test.ts` fails if the two files differ). Product names: `nameAr` in Arabic, `nameEn` in English.
+2. **Logical directions only**: `ms-`/`me-`/`ps-`/`pe-`, `text-start`/`text-end`, `start-0`, `border-s`,
+   `rounded-s` — never `ml-`, `pr-`, `text-left`, `left-0` (`conventions.test.ts` fails otherwise). Codes and
+   IDs in Latin script inside Arabic text go in `<bdi>`.
+3. **Money** comes from the API in halalas: show it with `formatSar` (`src/lib/money.ts`) inside
+   `t('money.sar', { amount })`. Never divide by 100 or use floating point in a component.
+4. **API calls** go through `src/api/` (`apiGet` adds the dev auth headers) as TanStack Query hooks. Every screen
+   that loads data shows loading (`role="status"`), empty, and error (`role="alert"` with a retry) states.
+5. **Accessible and touch-friendly**: every input has a `<label>`, actions are real `<button>`s and links,
+   controls are at least 44px high (`min-h-11`), errors are linked with `aria-describedby` and `aria-invalid`.
+6. **Tests** render the screen with `renderWithProviders` and stub `fetch` with `stubFetch` (never a real
+   server), act like the user (`userEvent`), and find elements by role and visible text, in Arabic and in
+   English where texts change. Every new screen gets an axe check (`src/test/axe.ts`) in both languages.
+7. **No new npm packages** unless the issue asks for one: the agent sandbox is offline and `npm ci` only
+   installs what `package-lock.json` already lists.
+8. A frontend issue changes only `frontend/`. If the screen needs an endpoint or field the API doesn't have,
+   say so — it is a separate backend issue.
