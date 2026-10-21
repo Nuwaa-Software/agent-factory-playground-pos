@@ -1,5 +1,7 @@
 using MiniPos.Api.Features.Reports.DailySales;
 using MiniPos.Api.Features.Sales.GetReceipt;
+using MiniPos.Api.Features.Sales.VoidSale;
+using MiniPos.Api.Features.Sales.ListSales;
 using MiniPos.Api.Features.Shifts;
 
 namespace MiniPos.Api.Features;
@@ -15,6 +17,8 @@ public static class FeatureEndpoints
         Sales.CreateSale.Endpoint.Map(app);
         Sales.GetSale.Endpoint.Map(app);
         Sales.GetReceipt.Endpoint.Map(app);
+        Sales.VoidSale.Endpoint.Map(app);
+        Sales.ListSales.Endpoint.Map(app);
         Reports.DailySales.Endpoint.Map(app);
         OpenShiftEndpoint.Map(app);
         CloseShiftEndpoint.Map(app);

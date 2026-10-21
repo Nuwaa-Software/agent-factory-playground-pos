@@ -12,7 +12,7 @@ public sealed record SaleLineResponse(Guid ProductId, string NameEn, string Name
     long LineNetHalalas);
 
 public sealed record SaleResponse(Guid Id, int Number, DateTimeOffset CreatedAt, IReadOnlyList<SaleLineResponse> Lines,
-    long NetHalalas, long VatHalalas, long TotalHalalas, string QrCode)
+    long NetHalalas, long VatHalalas, long TotalHalalas, string QrCode, bool Voided, DateTimeOffset? VoidedAt, PaymentType PaymentType)
 {
     /// <summary>The QR seller name is the company's Arabic name, as on the printed simplified invoice.</summary>
     public static SaleResponse From(Sale sale, Company company)
@@ -23,6 +23,7 @@ public sealed record SaleResponse(Guid Id, int Number, DateTimeOffset CreatedAt,
             [.. sale.Lines.Select(l => new SaleLineResponse(l.ProductId, l.ProductNameEn, l.ProductNameAr, l.Quantity,
                 l.UnitPriceHalalas, l.LineNetHalalas))],
             sale.NetHalalas, sale.VatHalalas, sale.TotalHalalas,
-            InvoiceQr.Encode(company.NameAr, company.VatNumber, sale.CreatedAt, sale.TotalHalalas, sale.VatHalalas));
+            InvoiceQr.Encode(company.NameAr, company.VatNumber, sale.CreatedAt, sale.TotalHalalas, sale.VatHalalas),
+            sale.Voided, sale.VoidedAt, sale.PaymentType);
     }
 }

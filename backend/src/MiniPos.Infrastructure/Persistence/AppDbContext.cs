@@ -19,6 +19,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
     public DbSet<Shift> Shifts => Set<Shift>();
 
+    public DbSet<CompanyConfig> CompanyConfigs => Set<CompanyConfig>();
+
     /// <summary>Read by the global query filters below, per DbContext instance (i.e. per request).</summary>
     public Guid CurrentCompanyId => tenant.CompanyId;
 
@@ -57,6 +59,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         {
             b.Property(s => s.CashierName).HasMaxLength(100);
             b.HasIndex(s => new { s.CompanyId, s.OpenedAt }).IsDescending();
+        });
+
+        modelBuilder.Entity<CompanyConfig>(b =>
+        {
+            b.Property(c => c.Key).HasMaxLength(128);
+            b.Property(c => c.Value).HasMaxLength(1024);
+            b.HasIndex(c => new { c.CompanyId, c.Key }).IsUnique();
         });
 
         // Multi-tenancy, read side: every ITenantScoped entity only ever returns the current company's rows.
