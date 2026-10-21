@@ -4,6 +4,7 @@ using MiniPos.Api.Features.Catalog.CreateProduct;
 using MiniPos.Api.Features.Sales.CreateSale;
 using MiniPos.Api.Features.Sales.GetSale;
 using MiniPos.Api.Features.Sales.GetReceipt;
+using MiniPos.Domain.Sales;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
@@ -174,5 +175,47 @@ public class SalesTests(PostgresFixture db) : ApiTestBase(db)
         // Verify final stock is exactly 0
         var products = await client.GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products");
         products!.Single().Stock.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Default_payment_type_is_Cash()
+    {
+        var (client, product) = await ShopWithProductAsync();
+        
+        var response = await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+        
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var sale = (await response.Content.ReadFromJsonAsync<SaleResponse>())!;
+        sale.PaymentType.Should().Be(PaymentType.Cash);
+    }
+
+    [Fact]
+    public async Task Card_payment_is_persisted()
+    {
+        var (client, product) = await ShopWithProductAsync();
+        
+        var response = await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)], PaymentType.Card));
+        
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var sale = (await response.Content.ReadFromJsonAsync<SaleResponse>())!;
+        sale.PaymentType.Should().Be(PaymentType.Card);
+        
+        // Verify it can be read back
+        var retrievedSale = await client.GetFromJsonAsync<SaleResponse>($"/api/pos/sales/{sale.Id}");
+        retrievedSale!.PaymentType.Should().Be(PaymentType.Card);
+    }
+
+    [Fact]
+    public async Task Invalid_payment_type_returns_400()
+    {
+        var (client, product) = await ShopWithProductAsync();
+        
+        // Send a request with an invalid payment type
+        var response = await client.PostAsJsonAsync("/api/pos/sales",
+            new { lines = new[] { new { productId = product.Id, quantity = 1 } }, paymentType = "Crypto" });
+        
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }
