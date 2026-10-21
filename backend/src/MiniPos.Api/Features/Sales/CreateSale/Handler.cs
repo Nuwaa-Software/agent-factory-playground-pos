@@ -18,7 +18,12 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         var ids = request.Lines.Select(l => l.ProductId).ToList();
         var products = await db.Products.Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken);
 
-        var sale = new Sale { CompanyId = tenant.CompanyId, CreatedAt = clock.GetUtcNow() };
+        var sale = new Sale
+        {
+            CompanyId = tenant.CompanyId,
+            CreatedAt = clock.GetUtcNow(),
+            PaymentType = request.PaymentType ?? PaymentType.Cash,
+        };
         foreach (var line in request.Lines)
         {
             if (!products.TryGetValue(line.ProductId, out var product))
