@@ -1,0 +1,25 @@
+{
+  "app": { "name": "MiniPos", "mainNav": "Main navigation" },
+  "nav": { "products": "Products", "signOut": "Sign out" },
+  "language": { "switchTo": "العربية" },
+  "common": { "loading": "Loading…", "retry": "Try again" },
+  "money": { "sar": "SAR {{amount}}" },
+  "signIn": {
+    "title": "Sign in (development)",
+    "companyId": "Company ID",
+    "companyIdHint": "The company's unique ID, e.g. 3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+    "companyIdInvalid": "Enter a valid company ID (GUID).",
+    "role": "Role",
+    "submit": "Sign in"
+  },
+  "roles": { "Admin": "Admin", "Cashier": "Cashier", "Viewer": "Viewer" },
+  "products": {
+    "title": "Products",
+    "name": "Name",
+    "sku": "SKU",
+    "price": "Price",
+    "stock": "Stock",
+    "empty": "No products yet.",
+    "loadError": "The products could not be loaded."
+  }
+}

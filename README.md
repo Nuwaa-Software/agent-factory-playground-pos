@@ -1,6 +1,6 @@
 # agent-factory-playground-pos
 
-**MiniPos** — a small multi-tenant point-of-sale API built like
+**MiniPos** — a small multi-tenant point-of-sale API and web frontend built like
 [nuwaa-pos](https://github.com/Nuwaa-Software/nuwaa-pos) (.NET 10 vertical slices, EF Core + PostgreSQL,
 FluentValidation, MediatR, `Result<T>`, xUnit unit / integration / architecture tests, Saudi VAT,
 ZATCA-style invoice QR, Arabic + English).
@@ -15,3 +15,13 @@ dotnet run --project backend/src/MiniPos.Api   # needs Postgres (see appsettings
 ```
 
 Dev auth: send `X-Company-Id: <guid>` and `X-Role: Admin|Cashier|Viewer` headers.
+
+The web frontend (`frontend/`, React + TypeScript + Vite, Arabic/English) talks to the API through Vite's
+dev proxy, so start the API first:
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173 — sign in with a company ID (GUID) and a role
+npm run check      # type check, lint, tests, build
+```
