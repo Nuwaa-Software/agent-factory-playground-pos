@@ -24,6 +24,8 @@ public sealed class Sale : ITenantScoped
     public bool Voided { get; set; }
 
     public DateTimeOffset? VoidedAt { get; set; }
+
+    public PaymentType PaymentType { get; set; } = PaymentType.Cash;
 }
 
 public sealed class SaleLine

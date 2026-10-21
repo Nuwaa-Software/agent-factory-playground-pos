@@ -15,5 +15,9 @@ public sealed class CreateSaleValidator : AbstractValidator<CreateSaleCommand>
             line.RuleFor(l => l.ProductId).NotEmpty();
             line.RuleFor(l => l.Quantity).InclusiveBetween(1, 999);
         });
+        
+        // Validate that if PaymentType is provided, it's a valid enum value
+        // This will catch invalid string values during deserialization
+        RuleFor(x => x.PaymentType).IsInEnum();
     }
 }
