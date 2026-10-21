@@ -69,6 +69,8 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pgEx && pgEx.SqlState == "23505")
         {
             // Handle the unique constraint violation for sale number
+            // Clear the change tracker to avoid EF Core tracking issues after a failed save
+            db.ChangeTracker.Clear();
             return Result<SaleResponse>.Failure(
                 new Error("sale.number_conflict", "Another sale was created at the same time. Please retry.", ErrorKind.Conflict));
         }
