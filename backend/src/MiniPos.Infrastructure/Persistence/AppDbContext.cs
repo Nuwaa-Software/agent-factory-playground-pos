@@ -4,6 +4,7 @@ using MiniPos.Domain.Catalog;
 using MiniPos.Domain.Common;
 using MiniPos.Domain.Companies;
 using MiniPos.Domain.Sales;
+using MiniPos.Domain.Shifts;
 using MiniPos.Infrastructure.Tenancy;
 
 namespace MiniPos.Infrastructure.Persistence;
@@ -15,6 +16,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<Sale> Sales => Set<Sale>();
+
+    public DbSet<Shift> Shifts => Set<Shift>();
 
     public DbSet<CompanyConfig> CompanyConfigs => Set<CompanyConfig>();
 
@@ -50,6 +53,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
                 l.Property(x => x.ProductNameAr).HasMaxLength(200);
                 l.Ignore(x => x.LineNetHalalas);
             });
+        });
+
+        modelBuilder.Entity<Shift>(b =>
+        {
+            b.Property(s => s.CashierName).HasMaxLength(100);
+            b.HasIndex(s => new { s.CompanyId, s.OpenedAt }).IsDescending();
         });
 
         modelBuilder.Entity<CompanyConfig>(b =>
