@@ -18,7 +18,12 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         var ids = request.Lines.Select(l => l.ProductId).ToList();
         var products = await db.Products.Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken);
 
-        var sale = new Sale { CompanyId = tenant.CompanyId, CreatedAt = clock.GetUtcNow() };
+        var sale = new Sale
+        {
+            CompanyId = tenant.CompanyId,
+            CreatedAt = clock.GetUtcNow(),
+            PaymentType = request.PaymentType ?? PaymentType.Cash,
+        };
         foreach (var line in request.Lines)
         {
             if (!products.TryGetValue(line.ProductId, out var product))
@@ -64,6 +69,8 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pgEx && pgEx.SqlState == "23505")
         {
             // Handle the unique constraint violation for sale number
+            // Clear the change tracker to avoid EF Core tracking issues after a failed save
+            db.ChangeTracker.Clear();
             return Result<SaleResponse>.Failure(
                 new Error("sale.number_conflict", "Another sale was created at the same time. Please retry.", ErrorKind.Conflict));
         }
