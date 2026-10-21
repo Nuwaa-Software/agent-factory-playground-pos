@@ -33,6 +33,15 @@ public sealed class ApiFactory(string connectionString) : WebApplicationFactory<
         await db.SaveChangesAsync();
         return company.Id;
     }
+
+    public async Task SetCompanyConfigAsync(Guid companyId, string key, string value)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var config = new CompanyConfig { CompanyId = companyId, Key = key, Value = value };
+        db.CompanyConfigs.Add(config);
+        await db.SaveChangesAsync();
+    }
 }
 
 /// <summary>Base class: one database + one API host per test class.</summary>
