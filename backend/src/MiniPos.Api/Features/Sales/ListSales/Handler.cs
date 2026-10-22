@@ -4,7 +4,7 @@ using MiniPos.Infrastructure.Persistence;
 
 namespace MiniPos.Api.Features.Sales.ListSales;
 
-public sealed class ListSalesHandler(AppDbContext db) : IRequestHandler<ListSalesQuery, ListSalesResponse>
+public sealed class ListSalesHandler(AppDbContext db, TimeProvider clock) : IRequestHandler<ListSalesQuery, ListSalesResponse>
 {
     public async Task<ListSalesResponse> Handle(ListSalesQuery request, CancellationToken cancellationToken)
     {
@@ -14,8 +14,24 @@ public sealed class ListSalesHandler(AppDbContext db) : IRequestHandler<ListSale
         // Clamp page size to be between 1 and 100
         var pageSize = Math.Clamp(request.PageSize, 1, 100);
         
+        // Apply date filtering if provided
+        var query = db.Sales.AsQueryable();
+        
+        // Set default date range if not provided
+        var from = request.From ?? clock.GetUtcNow().AddDays(-30);
+        var to = request.To ?? clock.GetUtcNow();
+        
+        // Ensure from is not after to
+        if (from > to)
+        {
+            // This should be handled by validation, but let's make sure
+            throw new ArgumentException("From date cannot be after To date");
+        }
+        
+        query = query.Where(s => s.CreatedAt >= from && s.CreatedAt <= to);
+        
         // Get total count
-        var totalCount = await db.Sales.CountAsync(cancellationToken);
+        var totalCount = await query.CountAsync(cancellationToken);
         
         // Calculate total pages
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
@@ -33,7 +49,7 @@ public sealed class ListSalesHandler(AppDbContext db) : IRequestHandler<ListSale
         }
         
         // Get the paginated data
-        var sales = await db.Sales
+        var sales = await query
             .OrderByDescending(s => s.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

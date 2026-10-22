@@ -181,4 +181,104 @@ public class SalesListTests(PostgresFixture db) : ApiTestBase(db)
         json.RootElement.GetProperty("totalCount").GetInt32().Should().Be(0);
         json.RootElement.GetProperty("sales").GetArrayLength().Should().Be(0);
     }
+
+    [Fact]
+    public async Task Default_30_day_range_returns_only_recent_sales()
+    {
+        // Arrange
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+        
+        // Create a product first
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 1000, 10));
+        productResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var product = (await productResponse.Content.ReadFromJsonAsync<Api.Features.Common.ProductResponse>())!;
+        
+        // Create a recent sale
+        var recentSaleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+        recentSaleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        
+        // Act - Get sales with default 30-day range (should return recent sale)
+        var response = await client.GetAsync("/api/pos/sales");
+        
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        var json = JsonDocument.Parse(content);
+        
+        json.RootElement.GetProperty("totalCount").GetInt32().Should().Be(1);
+        json.RootElement.GetProperty("sales").GetArrayLength().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Explicit_from_to_filtering_returns_only_sales_in_range()
+    {
+        // Arrange
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+        
+        // Create a product first
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 1000, 10));
+        productResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var product = (await productResponse.Content.ReadFromJsonAsync<Api.Features.Common.ProductResponse>())!;
+        
+        // Create a few sales
+        for (int i = 0; i < 3; i++)
+        {
+            var saleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+                new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+            saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+        
+        // Act - Query with a narrow date range that should match all sales
+        var from = DateTimeOffset.UtcNow.AddDays(-35);
+        var to = DateTimeOffset.UtcNow.AddDays(-25);
+        var response = await client.GetAsync($"/api/pos/sales?from={from:yyyy-MM-ddTHH:mm:ssZ}&to={to:yyyy-MM-ddTHH:mm:ssZ}");
+        
+        // Assert - Should return 0 sales since we're looking in the past
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        var json = JsonDocument.Parse(content);
+        
+        json.RootElement.GetProperty("totalCount").GetInt32().Should().Be(0);
+        json.RootElement.GetProperty("sales").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Boundary_inclusion_works_correctly()
+    {
+        // Arrange
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+        
+        // Create a product first
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 1000, 10));
+        productResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var product = (await productResponse.Content.ReadFromJsonAsync<Api.Features.Common.ProductResponse>())!;
+        
+        // Create a few sales
+        for (int i = 0; i < 2; i++)
+        {
+            var saleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+                new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+            saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+        
+        // Act - Query with a broad date range that should match all sales
+        var from = DateTimeOffset.UtcNow.AddDays(-35);
+        var to = DateTimeOffset.UtcNow.AddDays(1);
+        var response = await client.GetAsync($"/api/pos/sales?from={from:yyyy-MM-ddTHH:mm:ssZ}&to={to:yyyy-MM-ddTHH:mm:ssZ}");
+        
+        // Assert - Should return all sales
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        var json = JsonDocument.Parse(content);
+        
+        json.RootElement.GetProperty("totalCount").GetInt32().Should().Be(2);
+        json.RootElement.GetProperty("sales").GetArrayLength().Should().Be(2);
+    }
 }
