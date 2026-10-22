@@ -28,8 +28,13 @@ public sealed class UpdateProductHandler(AppDbContext db) : IRequestHandler<Upda
             product.Stock = command.Stock.Value;
         }
 
+        if (command.CategoryId.HasValue)
+        {
+            product.CategoryId = command.CategoryId.Value;
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         
-        return new ProductResponse(product.Id, product.NameEn, product.NameAr, product.Sku, product.PriceHalalas, product.Stock);
+        return new ProductResponse(product.Id, product.NameEn, product.NameAr, product.Sku, product.PriceHalalas, product.Stock, product.CategoryId);
     }
 }

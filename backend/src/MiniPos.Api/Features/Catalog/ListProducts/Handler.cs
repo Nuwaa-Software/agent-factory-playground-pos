@@ -10,6 +10,6 @@ public sealed class ListProductsHandler(AppDbContext db) : IRequestHandler<ListP
     public async Task<IReadOnlyList<ProductResponse>> Handle(ListProductsQuery request, CancellationToken cancellationToken) =>
         await db.Products
             .OrderBy(p => p.Sku)
-            .Select(p => new ProductResponse(p.Id, p.NameEn, p.NameAr, p.Sku, p.PriceHalalas, p.Stock))
+            .Select(p => new ProductResponse(p.Id, p.NameEn, p.NameAr, p.Sku, p.PriceHalalas, p.Stock, p.CategoryId))
             .ToListAsync(cancellationToken);
 }
