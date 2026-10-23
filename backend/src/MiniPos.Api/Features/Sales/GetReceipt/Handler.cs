@@ -13,7 +13,7 @@ public sealed class GetReceiptHandler(AppDbContext db, ITenantContext tenant) : 
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var sale = await db.Sales.IgnoreQueryFilters().SingleOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
+        var sale = await db.Sales.SingleOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
         if (sale is null)
         {
             return new Error("sale.not_found", "Sale not found.", ErrorKind.NotFound);

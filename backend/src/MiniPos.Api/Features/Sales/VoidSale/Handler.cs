@@ -12,10 +12,8 @@ public sealed class VoidSaleHandler(AppDbContext db, ITenantContext tenant, Time
 {
     public async Task<Result<MiniPos.Api.Features.Sales.GetSale.SaleResponse>> Handle(VoidSaleCommand request, CancellationToken cancellationToken)
     {
-        // Load the sale with IgnoreQueryFilters to bypass tenant filter and do explicit company check
-        var sale = await db.Sales
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
+        // Load the sale via the global tenant filter; cross-tenant rows are invisible and return 404
+        var sale = await db.Sales.FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
 
         if (sale is null)
         {
