@@ -17,6 +17,12 @@ public sealed class ListSalesHandler(AppDbContext db, TimeProvider clock) : IReq
         // Apply date filtering if provided
         var query = db.Sales.AsQueryable();
         
+        // Filter by customer if provided
+        if (request.CustomerId.HasValue)
+        {
+            query = query.Where(s => s.CustomerId == request.CustomerId);
+        }
+        
         // Set default date range if not provided
         var from = request.From ?? clock.GetUtcNow().AddDays(-30);
         var to = request.To ?? clock.GetUtcNow();
@@ -59,7 +65,8 @@ public sealed class ListSalesHandler(AppDbContext db, TimeProvider clock) : IReq
                 CreatedAt: s.CreatedAt,
                 NetHalalas: s.NetHalalas,
                 VatHalalas: s.VatHalalas,
-                TotalHalalas: s.TotalHalalas
+                TotalHalalas: s.TotalHalalas,
+                CustomerId: s.CustomerId
             ))
             .ToListAsync(cancellationToken);
         
