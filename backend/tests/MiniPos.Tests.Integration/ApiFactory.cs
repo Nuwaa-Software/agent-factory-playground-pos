@@ -13,6 +13,20 @@ public sealed class ApiFactory(string connectionString) : WebApplicationFactory<
         builder.UseSetting("ConnectionStrings:Default", connectionString);
         builder.UseSetting("Database:EnsureCreated", "true");
         builder.UseEnvironment("Testing");
+        builder.ConfigureServices(services =>
+        {
+            // Configure JSON serialization for minimal APIs to use string enum values
+            var jsonOptions = services.FirstOrDefault(d =>
+                d.ServiceType == typeof(Microsoft.Extensions.Options.IConfigureOptions<System.Text.Json.JsonSerializerOptions>));
+            if (jsonOptions != null)
+            {
+                services.Remove(jsonOptions);
+            }
+            services.Configure<System.Text.Json.JsonSerializerOptions>(options =>
+            {
+                options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            });
+        });
     }
 
     /// <summary>A client acting as <paramref name="role"/> in <paramref name="companyId"/>.</summary>

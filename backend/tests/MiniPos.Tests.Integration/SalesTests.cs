@@ -7,6 +7,9 @@ using MiniPos.Api.Features.Sales.GetReceipt;
 using MiniPos.Domain.Sales;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using MiniPos.Infrastructure.Persistence;
 
 namespace MiniPos.Tests.Integration;
 
@@ -306,5 +309,54 @@ public class SalesTests(PostgresFixture db) : ApiTestBase(db)
             new { lines = new[] { new { productId = product.Id, quantity = 1 } }, paymentType = "Crypto" });
         
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Void_sale_older_than_window_returns_400()
+    {
+        // Create a company and product
+        var (client, product) = await ShopWithProductAsync();
+
+        // Create a sale
+        var created = await (await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]))).Content.ReadFromJsonAsync<SaleResponse>();
+
+        // Backdate the sale's CreatedAt by 2 days so it falls outside the default 1440-minute window
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Sales
+            .IgnoreQueryFilters()
+            .Where(s => s.Id == created!.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(sa => sa.CreatedAt, DateTimeOffset.UtcNow.AddDays(-2)));
+
+        // Try to void the backdated sale - should return 400
+        var response = await client.PatchAsync($"/api/pos/sales/{created!.Id}/void", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Void_already_voided_sale_is_idempotent()
+    {
+        // Create a company and product
+        var (client, product) = await ShopWithProductAsync();
+
+        // Create a sale
+        var created = await (await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]))).Content.ReadFromJsonAsync<SaleResponse>();
+
+        // First void - should succeed
+        var response1 = await client.PatchAsync($"/api/pos/sales/{created!.Id}/void", null);
+        response1.StatusCode.Should().Be(HttpStatusCode.OK);
+        var voidedSale1 = await response1.Content.ReadFromJsonAsync<SaleResponse>();
+        voidedSale1!.Voided.Should().BeTrue();
+        var firstVoidedAt = voidedSale1.VoidedAt!.Value;
+
+        // Second void - should also succeed (idempotent)
+        var response2 = await client.PatchAsync($"/api/pos/sales/{created.Id}/void", null);
+        response2.StatusCode.Should().Be(HttpStatusCode.OK);
+        var voidedSale2 = await response2.Content.ReadFromJsonAsync<SaleResponse>();
+        voidedSale2!.Voided.Should().BeTrue();
+        voidedSale2.VoidedAt.Should().BeCloseTo(firstVoidedAt!, TimeSpan.FromMilliseconds(1));
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MiniPos.Domain.Catalog;
 using MiniPos.Domain.Common;
 using MiniPos.Domain.Companies;
+using MiniPos.Domain.Customers;
 using MiniPos.Domain.Sales;
 using MiniPos.Domain.Shifts;
 using MiniPos.Infrastructure.Tenancy;
@@ -15,7 +16,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
     public DbSet<Product> Products => Set<Product>();
 
+    public DbSet<Category> Categories => Set<Category>();
+
     public DbSet<Sale> Sales => Set<Sale>();
+
+    public DbSet<Customer> Customers => Set<Customer>();
 
     public DbSet<Shift> Shifts => Set<Shift>();
 
@@ -43,6 +48,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             b.HasIndex(p => new { p.CompanyId, p.Sku }).IsUnique();
         });
 
+        modelBuilder.Entity<Category>(b =>
+        {
+            b.Property(c => c.NameEn).HasMaxLength(200);
+            b.Property(c => c.NameAr).HasMaxLength(200);
+            b.Property(c => c.Description).HasMaxLength(1024);
+            b.HasIndex(c => new { c.CompanyId, c.NameEn }).IsUnique();
+        });
+
         modelBuilder.Entity<Sale>(b =>
         {
             b.HasIndex(s => new { s.CompanyId, s.Number }).IsUnique();
@@ -66,6 +79,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             b.Property(c => c.Key).HasMaxLength(128);
             b.Property(c => c.Value).HasMaxLength(1024);
             b.HasIndex(c => new { c.CompanyId, c.Key }).IsUnique();
+        });
+
+        modelBuilder.Entity<Customer>(b =>
+        {
+            b.Property(c => c.Name).HasMaxLength(200);
+            b.Property(c => c.Phone).HasMaxLength(32);
         });
 
         // Multi-tenancy, read side: every ITenantScoped entity only ever returns the current company's rows.

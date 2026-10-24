@@ -23,6 +23,7 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
             CompanyId = tenant.CompanyId,
             CreatedAt = clock.GetUtcNow(),
             PaymentType = request.PaymentType ?? PaymentType.Cash,
+            CustomerId = request.CustomerId,
         };
         foreach (var line in request.Lines)
         {

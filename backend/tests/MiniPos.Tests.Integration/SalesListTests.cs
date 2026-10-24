@@ -4,6 +4,7 @@ using MiniPos.Api.Features.Catalog.CreateProduct;
 using MiniPos.Api.Features.Sales.CreateSale;
 using MiniPos.Api.Features.Sales.ListSales;
 using MiniPos.Api.Features.Sales.GetSale;
+using MiniPos.Domain.Sales;
 using System.Text.Json;
 
 namespace MiniPos.Tests.Integration;
@@ -280,5 +281,143 @@ public class SalesListTests(PostgresFixture db) : ApiTestBase(db)
         
         json.RootElement.GetProperty("totalCount").GetInt32().Should().Be(2);
         json.RootElement.GetProperty("sales").GetArrayLength().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Status_filter_returns_correct_results()
+    {
+        // Arrange
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Create a product first
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 1000, 10));
+        productResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var product = (await productResponse.Content.ReadFromJsonAsync<Api.Features.Common.ProductResponse>())!;
+
+        // Create 3 sales (all active by default)
+        for (int i = 0; i < 3; i++)
+        {
+            var saleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+                new CreateSaleCommand([new CreateSaleLine(product.Id, 1)]));
+            saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        // Void one sale (requires Admin role)
+        var listResp = await client.GetAsync("/api/pos/sales");
+        listResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var listJson = (await listResp.Content.ReadFromJsonAsync<ListSalesResponse>())!;
+        var saleToVoid = listJson.Sales[0];
+        var voidResponse = await client.PatchAsync($"/api/pos/sales/{saleToVoid.Id}/void", null);
+        voidResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Act & Assert — status=active: expect 2 sales, all with voided == false
+        var activeResponse = await client.GetAsync("/api/pos/sales?status=active");
+        activeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var activeContent = await activeResponse.Content.ReadAsStringAsync();
+        var activeJson = JsonDocument.Parse(activeContent);
+        activeJson.RootElement.GetProperty("totalCount").GetInt32().Should().Be(2);
+        activeJson.RootElement.GetProperty("sales").GetArrayLength().Should().Be(2);
+        foreach (var sale in activeJson.RootElement.GetProperty("sales").EnumerateArray())
+        {
+            sale.GetProperty("voided").GetBoolean().Should().BeFalse();
+        }
+
+        // Act & Assert — status=voided: expect 1 sale with voided == true and non-null voidedAt
+        var voidedResponse = await client.GetAsync("/api/pos/sales?status=voided");
+        voidedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var voidedContent = await voidedResponse.Content.ReadAsStringAsync();
+        var voidedJson = JsonDocument.Parse(voidedContent);
+        voidedJson.RootElement.GetProperty("totalCount").GetInt32().Should().Be(1);
+        voidedJson.RootElement.GetProperty("sales").GetArrayLength().Should().Be(1);
+        var voidedSale = voidedJson.RootElement.GetProperty("sales")[0];
+        voidedSale.GetProperty("voided").GetBoolean().Should().BeTrue();
+        voidedSale.GetProperty("voidedAt").GetString().Should().NotBeNull();
+
+        // Act & Assert — status=all: expect 3 sales
+        var allResponse = await client.GetAsync("/api/pos/sales?status=all");
+        allResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var allContent2 = await allResponse.Content.ReadAsStringAsync();
+        var allJson2 = JsonDocument.Parse(allContent2);
+        allJson2.RootElement.GetProperty("totalCount").GetInt32().Should().Be(3);
+
+        // Act & Assert — status=bogus (unknown value): expect 3 sales (no filter)
+        var bogusResponse = await client.GetAsync("/api/pos/sales?status=bogus");
+        bogusResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var bogusContent = await bogusResponse.Content.ReadAsStringAsync();
+        var bogusJson = JsonDocument.Parse(bogusContent);
+        bogusJson.RootElement.GetProperty("totalCount").GetInt32().Should().Be(3);
+
+        // Act & Assert — pagination with status filter: pageSize=1, status=active → totalCount=2, totalPages=2
+        var paginatedResponse = await client.GetAsync("/api/pos/sales?status=active&page=1&pageSize=1");
+        paginatedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var paginatedContent = await paginatedResponse.Content.ReadAsStringAsync();
+        var paginatedJson = JsonDocument.Parse(paginatedContent);
+        paginatedJson.RootElement.GetProperty("totalCount").GetInt32().Should().Be(2);
+        paginatedJson.RootElement.GetProperty("totalPages").GetInt32().Should().Be(2);
+        paginatedJson.RootElement.GetProperty("sales").GetArrayLength().Should().Be(1);
+
+        // Page 2 should also have 1 sale
+        var page2Response = await client.GetAsync("/api/pos/sales?status=active&page=2&pageSize=1");
+        page2Response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page2Content = await page2Response.Content.ReadAsStringAsync();
+        var page2Json = JsonDocument.Parse(page2Content);
+        page2Json.RootElement.GetProperty("totalCount").GetInt32().Should().Be(2);
+        page2Json.RootElement.GetProperty("sales").GetArrayLength().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SaleSummary_includes_voided_voidedAt_paymentType_fields()
+    {
+        // Arrange
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Create a product first
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 1000, 10));
+        productResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var product = (await productResponse.Content.ReadFromJsonAsync<Api.Features.Common.ProductResponse>())!;
+
+        // Create a sale with PaymentType.Card
+        var saleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new CreateSaleLine(product.Id, 1)], PaymentType.Card));
+        saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Act — Get sales and verify SaleSummary fields for active sale
+        var getResponse = await client.GetAsync("/api/pos/sales");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var getContent = await getResponse.Content.ReadAsStringAsync();
+        var getJson = JsonDocument.Parse(getContent);
+
+        var firstSale = getJson.RootElement.GetProperty("sales")[0];
+        firstSale.GetProperty("voided").GetBoolean().Should().BeFalse();
+        firstSale.GetProperty("voidedAt").ValueKind.Should().Be(JsonValueKind.Null);
+        var paymentTypeValue = firstSale.GetProperty("paymentType");
+        if (paymentTypeValue.ValueKind == JsonValueKind.String)
+            paymentTypeValue.GetString().Should().Be("Card");
+        else
+            paymentTypeValue.GetInt32().Should().Be(1); // Card = 1
+
+        // Void the sale
+        var saleId = firstSale.GetProperty("id").GetGuid();
+        var voidResp = await client.PatchAsync($"/api/pos/sales/{saleId}/void", null);
+        voidResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Act — Get sales again and verify SaleSummary fields for voided sale
+        var getResponse2 = await client.GetAsync("/api/pos/sales");
+        getResponse2.StatusCode.Should().Be(HttpStatusCode.OK);
+        var getContent2 = await getResponse2.Content.ReadAsStringAsync();
+        var getJson2 = JsonDocument.Parse(getContent2);
+
+        var voidedSale = getJson2.RootElement.GetProperty("sales")[0];
+        voidedSale.GetProperty("voided").GetBoolean().Should().BeTrue();
+        voidedSale.GetProperty("voidedAt").GetString().Should().NotBeNull();
+        var paymentTypeValue2 = voidedSale.GetProperty("paymentType");
+        if (paymentTypeValue2.ValueKind == JsonValueKind.String)
+            paymentTypeValue2.GetString().Should().Be("Card");
+        else
+            paymentTypeValue2.GetInt32().Should().Be(1); // Card = 1
     }
 }

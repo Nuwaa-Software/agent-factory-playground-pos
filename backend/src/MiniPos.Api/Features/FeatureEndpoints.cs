@@ -1,4 +1,7 @@
 using MiniPos.Api.Features.Catalog.LowStockProducts;
+using MiniPos.Api.Features.Customers.CreateCustomer;
+using MiniPos.Api.Features.Customers.ListCustomers;
+using MiniPos.Api.Features.Customers.UpdateCustomer;
 using MiniPos.Api.Features.Reports.DailySales;
 using MiniPos.Api.Features.Reports.SalesAnalytics;
 using MiniPos.Api.Features.Sales.GetReceipt;
@@ -17,6 +20,9 @@ public static class FeatureEndpoints
         Catalog.ListProducts.Endpoint.Map(app);
         Catalog.UpdateProduct.Endpoint.Map(app);
         Catalog.LowStockProducts.Endpoint.Map(app);
+        Catalog.CreateCategory.CreateCategoryEndpoint.Map(app);
+        Catalog.UpdateCategory.UpdateCategoryEndpoint.Map(app);
+        Catalog.ListCategories.ListCategoriesEndpoint.Map(app);
         Sales.CreateSale.Endpoint.Map(app);
         Sales.GetSale.Endpoint.Map(app);
         Sales.GetReceipt.Endpoint.Map(app);
@@ -24,6 +30,9 @@ public static class FeatureEndpoints
         Sales.ListSales.Endpoint.Map(app);
         Reports.DailySales.Endpoint.Map(app);
         Reports.SalesAnalytics.Endpoint.Map(app);
+        Customers.CreateCustomer.Endpoint.Map(app);
+        Customers.UpdateCustomer.Endpoint.Map(app);
+        Customers.ListCustomers.Endpoint.Map(app);
         OpenShiftEndpoint.Map(app);
         CloseShiftEndpoint.Map(app);
         GetShiftEndpoint.Map(app);
