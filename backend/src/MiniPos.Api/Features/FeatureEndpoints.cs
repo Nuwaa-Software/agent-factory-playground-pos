@@ -8,6 +8,9 @@ using MiniPos.Api.Features.Sales.GetReceipt;
 using MiniPos.Api.Features.Sales.VoidSale;
 using MiniPos.Api.Features.Sales.ListSales;
 using MiniPos.Api.Features.Shifts;
+using MiniPos.Api.Features.Users.CreateUser;
+using MiniPos.Api.Features.Users.ListUsers;
+using MiniPos.Api.Features.Users.UpdateUser;
 
 namespace MiniPos.Api.Features;
 
@@ -33,6 +36,9 @@ public static class FeatureEndpoints
         Customers.CreateCustomer.Endpoint.Map(app);
         Customers.UpdateCustomer.Endpoint.Map(app);
         Customers.ListCustomers.Endpoint.Map(app);
+        Users.CreateUser.Endpoint.Map(app);
+        Users.ListUsers.Endpoint.Map(app);
+        Users.UpdateUser.Endpoint.Map(app);
         OpenShiftEndpoint.Map(app);
         CloseShiftEndpoint.Map(app);
         GetShiftEndpoint.Map(app);
