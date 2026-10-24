@@ -57,4 +57,97 @@ public class CatalogTests(PostgresFixture db) : ApiTestBase(db)
         await client.PostAsJsonAsync("/api/inventory/products", command);
         (await client.PostAsJsonAsync("/api/inventory/products", command)).StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
+
+    [Fact]
+    public async Task Search_by_english_name_returns_matching_products()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+        
+        await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 5000, 10));
+        await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Hat", "قبعة", "HAT-01", 2000, 5));
+
+        var list = await client.GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products?q=shirt");
+        list.Should().NotBeNull();
+        list.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Search_by_arabic_name_returns_matching_products()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+        
+        await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 5000, 10));
+        await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Hat", "قبعة", "HAT-01", 2000, 5));
+
+        var list = await client.GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products?q=قبعة");
+        list.Should().NotBeNull();
+        list.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Empty_or_missing_query_returns_all_products()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+        
+        await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 5000, 10));
+        await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Hat", "قبعة", "HAT-01", 2000, 5));
+
+        var list = await client.GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products");
+        list.Should().NotBeNull();
+        list.Should().HaveCount(2);
+
+        var listWithEmptyQuery = await client.GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products?q=");
+        listWithEmptyQuery.Should().NotBeNull();
+        listWithEmptyQuery.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Leading_and_trailing_spaces_in_query_are_trimmed()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+        
+        await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 5000, 10));
+        await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Hat", "قبعة", "HAT-01", 2000, 5));
+
+        var list = await client.GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products?q=  shirt  ");
+        list.Should().NotBeNull();
+        list.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Search_does_not_leak_products_from_other_companies()
+    {
+        var a = await Factory.CreateCompanyAsync("A", "أ");
+        var b = await Factory.CreateCompanyAsync("B", "ب");
+        
+        // Create product in company A
+        await Factory.ClientFor(a).PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", "SHIRT-01", 5000, 10));
+        
+        // Create product in company B
+        await Factory.ClientFor(b).PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Hat", "قبعة", "HAT-01", 2000, 5));
+
+        // Company A should only see its own products
+        var seenByA = await Factory.ClientFor(a).GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products?q=shirt");
+        seenByA.Should().NotBeNull();
+        seenByA.Should().ContainSingle();
+
+        // Company B should only see its own products
+        var seenByB = await Factory.ClientFor(b).GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products?q=قبعة");
+        seenByB.Should().NotBeNull();
+        seenByB.Should().ContainSingle();
+    }
 }
