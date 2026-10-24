@@ -10,6 +10,6 @@ public sealed class ListCustomersHandler(AppDbContext db) : IRequestHandler<List
     public async Task<IReadOnlyList<CustomerResponse>> Handle(ListCustomersQuery request, CancellationToken cancellationToken) =>
         await db.Customers
             .OrderBy(c => c.Name)
-            .Select(c => new CustomerResponse(c.Id, c.Name, c.Phone))
+            .Select(c => new CustomerResponse(c.Id, c.Name, c.Phone, c.CreditBalanceHalalas))
             .ToListAsync(cancellationToken);
 }

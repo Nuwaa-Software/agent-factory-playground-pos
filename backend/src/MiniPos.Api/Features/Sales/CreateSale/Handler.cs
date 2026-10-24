@@ -52,7 +52,19 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         sale.NetHalalas = sale.Lines.Sum(l => l.LineNetHalalas);
         sale.VatHalalas = Vat.Compute(sale.NetHalalas);
         sale.TotalHalalas = sale.NetHalalas + sale.VatHalalas;
-        
+
+        // Update customer credit balance for credit sales
+        if (sale.PaymentType == PaymentType.Credit && request.CustomerId is not null)
+        {
+            var customer = await db.Customers.SingleOrDefaultAsync(
+                c => c.Id == request.CustomerId.Value, cancellationToken);
+            if (customer is null)
+            {
+                return new Error("sale.customer_not_found", "Customer not found.", ErrorKind.NotFound);
+            }
+            customer.CreditBalanceHalalas += sale.TotalHalalas;
+        }
+
         // Use a more robust approach to assign sale numbers that handles concurrency
         var maxNumber = await db.Sales.Where(s => s.CompanyId == tenant.CompanyId).MaxAsync(s => (int?)s.Number, cancellationToken);
         sale.Number = (maxNumber ?? 0) + 1;
