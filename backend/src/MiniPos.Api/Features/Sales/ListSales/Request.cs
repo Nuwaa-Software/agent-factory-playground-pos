@@ -12,6 +12,8 @@ public sealed record ListSalesQuery : IRequest<ListSalesResponse>
     public DateTimeOffset? From { get; init; }
     
     public DateTimeOffset? To { get; init; }
+
+    public Guid? CustomerId { get; init; }
     
     public string? Status { get; init; }
 }
@@ -31,6 +33,7 @@ public sealed record SaleSummary(
     long NetHalalas,
     long VatHalalas,
     long TotalHalalas,
+    Guid? CustomerId,
     bool Voided,
     DateTimeOffset? VoidedAt,
     PaymentType PaymentType
