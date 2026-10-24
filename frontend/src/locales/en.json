@@ -21,5 +21,23 @@
     "stock": "Stock",
     "empty": "No products yet.",
     "loadError": "The products could not be loaded."
+  },
+  "sales": {
+    "title": "Sales",
+    "number": "Invoice #",
+    "date": "Date",
+    "net": "Net",
+    "vat": "VAT",
+    "total": "Total",
+    "empty": "No sales yet.",
+    "loadError": "The sales could not be loaded.",
+    "pageOf": "Page {{current}} of {{total}}",
+    "prevPage": "Previous",
+    "nextPage": "Next"
+  },
+  "nav": {
+    "products": "Products",
+    "sales": "Sales",
+    "signOut": "Sign out"
   }
 }
