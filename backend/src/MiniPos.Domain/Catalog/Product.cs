@@ -20,4 +20,6 @@ public sealed class Product : ITenantScoped
 
     [ConcurrencyCheck]
     public int Stock { get; set; }
+
+    public Guid? CategoryId { get; set; }
 }
