@@ -23,7 +23,8 @@ public sealed class LowStockProductsHandler(AppDbContext db) : IRequestHandler<L
                 p.NameAr,
                 p.Sku,
                 p.PriceHalalas,
-                p.Stock))
+                p.Stock,
+                p.CategoryId))
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyList<ProductResponse>>.Success(products);
