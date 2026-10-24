@@ -3,6 +3,7 @@ using MiniPos.Api.Features.Customers.CreateCustomer;
 using MiniPos.Api.Features.Customers.ListCustomers;
 using MiniPos.Api.Features.Customers.UpdateCustomer;
 using MiniPos.Api.Features.Reports.DailySales;
+using MiniPos.Api.Features.Reports.SalesAnalytics;
 using MiniPos.Api.Features.Sales.GetReceipt;
 using MiniPos.Api.Features.Sales.VoidSale;
 using MiniPos.Api.Features.Sales.ListSales;
@@ -28,6 +29,7 @@ public static class FeatureEndpoints
         Sales.VoidSale.Endpoint.Map(app);
         Sales.ListSales.Endpoint.Map(app);
         Reports.DailySales.Endpoint.Map(app);
+        Reports.SalesAnalytics.Endpoint.Map(app);
         Customers.CreateCustomer.Endpoint.Map(app);
         Customers.UpdateCustomer.Endpoint.Map(app);
         Customers.ListCustomers.Endpoint.Map(app);
