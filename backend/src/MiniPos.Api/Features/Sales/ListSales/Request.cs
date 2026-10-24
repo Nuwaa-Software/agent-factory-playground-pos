@@ -1,4 +1,5 @@
 using MediatR;
+using MiniPos.Domain.Sales;
 
 namespace MiniPos.Api.Features.Sales.ListSales;
 
@@ -13,6 +14,8 @@ public sealed record ListSalesQuery : IRequest<ListSalesResponse>
     public DateTimeOffset? To { get; init; }
 
     public Guid? CustomerId { get; init; }
+    
+    public string? Status { get; init; }
 }
 
 public sealed record ListSalesResponse(
@@ -30,5 +33,8 @@ public sealed record SaleSummary(
     long NetHalalas,
     long VatHalalas,
     long TotalHalalas,
-    Guid? CustomerId
+    Guid? CustomerId,
+    bool Voided,
+    DateTimeOffset? VoidedAt,
+    PaymentType PaymentType
 );

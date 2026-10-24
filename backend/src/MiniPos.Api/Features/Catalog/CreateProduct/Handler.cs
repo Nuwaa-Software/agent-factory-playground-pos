@@ -26,10 +26,11 @@ public sealed class CreateProductHandler(AppDbContext db, ITenantContext tenant)
             Sku = request.Sku,
             PriceHalalas = request.PriceHalalas,
             Stock = request.Stock,
+            CategoryId = request.CategoryId
         };
         db.Products.Add(product);
         await db.SaveChangesAsync(cancellationToken);
         return new ProductResponse(product.Id, product.NameEn, product.NameAr, product.Sku, product.PriceHalalas,
-            product.Stock);
+            product.Stock, product.CategoryId);
     }
 }

@@ -16,6 +16,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
     public DbSet<Product> Products => Set<Product>();
 
+    public DbSet<Category> Categories => Set<Category>();
+
     public DbSet<Sale> Sales => Set<Sale>();
 
     public DbSet<Customer> Customers => Set<Customer>();
@@ -44,6 +46,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             b.Property(p => p.NameAr).HasMaxLength(200);
             b.Property(p => p.Sku).HasMaxLength(64);
             b.HasIndex(p => new { p.CompanyId, p.Sku }).IsUnique();
+        });
+
+        modelBuilder.Entity<Category>(b =>
+        {
+            b.Property(c => c.NameEn).HasMaxLength(200);
+            b.Property(c => c.NameAr).HasMaxLength(200);
+            b.Property(c => c.Description).HasMaxLength(1024);
+            b.HasIndex(c => new { c.CompanyId, c.NameEn }).IsUnique();
         });
 
         modelBuilder.Entity<Sale>(b =>

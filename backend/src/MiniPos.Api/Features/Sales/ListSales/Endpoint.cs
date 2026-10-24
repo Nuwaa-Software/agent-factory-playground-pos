@@ -6,8 +6,8 @@ namespace MiniPos.Api.Features.Sales.ListSales;
 public static class Endpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapGet("/api/pos/sales", async (ISender sender, int? page, int? pageSize, DateTimeOffset? from, DateTimeOffset? to, Guid? customerId, CancellationToken ct) =>
-                Results.Ok(await sender.Send(new ListSalesQuery { Page = page ?? 1, PageSize = pageSize ?? 20, From = from, To = to, CustomerId = customerId }, ct)))
+        app.MapGet("/api/pos/sales", async (ISender sender, int? page, int? pageSize, DateTimeOffset? from, DateTimeOffset? to, Guid? customerId, string? status, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new ListSalesQuery { Page = page ?? 1, PageSize = pageSize ?? 20, From = from, To = to, CustomerId = customerId, Status = status }, ct)))
             .RequireAuthorization(Policies.PosCashier)
             .WithName("ListSales");
 }

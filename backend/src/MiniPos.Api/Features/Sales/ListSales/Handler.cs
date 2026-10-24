@@ -36,6 +36,21 @@ public sealed class ListSalesHandler(AppDbContext db, TimeProvider clock) : IReq
         
         query = query.Where(s => s.CreatedAt >= from && s.CreatedAt <= to);
         
+        // Apply status filter if provided
+        if (request.Status != null)
+        {
+            var status = request.Status.ToLowerInvariant();
+            if (status == "active")
+            {
+                query = query.Where(s => !s.Voided);
+            }
+            else if (status == "voided")
+            {
+                query = query.Where(s => s.Voided);
+            }
+            // For null, "all", or any other value: no additional filter
+        }
+        
         // Get total count
         var totalCount = await query.CountAsync(cancellationToken);
         
@@ -66,7 +81,10 @@ public sealed class ListSalesHandler(AppDbContext db, TimeProvider clock) : IReq
                 NetHalalas: s.NetHalalas,
                 VatHalalas: s.VatHalalas,
                 TotalHalalas: s.TotalHalalas,
-                CustomerId: s.CustomerId
+                CustomerId: s.CustomerId,
+                Voided: s.Voided,
+                VoidedAt: s.VoidedAt,
+                PaymentType: s.PaymentType
             ))
             .ToListAsync(cancellationToken);
         
