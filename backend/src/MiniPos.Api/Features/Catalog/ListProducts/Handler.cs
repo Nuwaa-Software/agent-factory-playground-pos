@@ -24,7 +24,7 @@ public sealed class ListProductsHandler(AppDbContext db) : IRequestHandler<ListP
 
         var result = await query
             .OrderBy(p => p.Sku)
-            .Select(p => new ProductResponse(p.Id, p.NameEn, p.NameAr, p.Sku, p.PriceHalalas, p.Stock))
+            .Select(p => new ProductResponse(p.Id, p.NameEn, p.NameAr, p.Sku, p.PriceHalalas, p.Stock, p.CategoryId))
             .ToListAsync(cancellationToken);
             
         return result;
