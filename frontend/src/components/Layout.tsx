@@ -25,6 +25,9 @@ export default function Layout() {
             <NavLink to="/products" className={navLink}>
               {t('nav.products')}
             </NavLink>
+            <NavLink to="/sales" className={navLink}>
+              {t('nav.sales')}
+            </NavLink>
           </nav>
         )}
         <div className="ms-auto flex gap-2">
