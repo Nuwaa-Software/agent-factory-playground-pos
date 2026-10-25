@@ -64,8 +64,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
                 l.WithOwner().HasForeignKey("SaleId");
                 l.Property(x => x.ProductNameEn).HasMaxLength(200);
                 l.Property(x => x.ProductNameAr).HasMaxLength(200);
+                l.Property(x => x.DiscountHalalas).HasColumnName("DiscountHalalas");
+                l.Property(x => x.DiscountReason).HasMaxLength(512);
                 l.Ignore(x => x.LineNetHalalas);
             });
+            b.Property(s => s.SaleDiscountHalalas).HasDefaultValue(0L);
+            b.Property(s => s.SaleDiscountReason).HasMaxLength(512);
         });
 
         modelBuilder.Entity<Shift>(b =>

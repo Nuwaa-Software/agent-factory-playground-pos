@@ -36,11 +36,33 @@ public sealed class GetReceiptHandler(AppDbContext db, ITenantContext tenant) : 
 
         foreach (var line in sale.Lines)
         {
-            var lineNet = InvoiceQr.FormatSar(line.LineNetHalalas);
-            receiptLines.Add($"{line.Quantity} x {line.ProductNameEn} / {line.ProductNameAr}  {lineNet}");
+            var original = InvoiceQr.FormatSar(line.UnitPriceHalalas * line.Quantity);
+            if (line.DiscountHalalas > 0)
+            {
+                receiptLines.Add($"{line.Quantity} x {line.ProductNameEn} / {line.ProductNameAr}  {original}");
+                receiptLines.Add($"  Discount ({line.DiscountReason ?? ""}): -{InvoiceQr.FormatSar(line.DiscountHalalas)}");
+                receiptLines.Add($"  Net: {InvoiceQr.FormatSar(line.LineNetHalalas)}");
+            }
+            else
+            {
+                var lineNet = InvoiceQr.FormatSar(line.LineNetHalalas);
+                receiptLines.Add($"{line.Quantity} x {line.ProductNameEn} / {line.ProductNameAr}  {lineNet}");
+            }
         }
 
-        receiptLines.Add($"Net: {InvoiceQr.FormatSar(sale.NetHalalas)}");
+        // Sale-level discount
+        if (sale.SaleDiscountHalalas > 0)
+        {
+            var subtotal = InvoiceQr.FormatSar(sale.Lines.Sum(l => l.LineNetHalalas));
+            receiptLines.Add($"Subtotal: {subtotal}");
+            receiptLines.Add($"Sale Discount ({sale.SaleDiscountReason ?? ""}): -{InvoiceQr.FormatSar(sale.SaleDiscountHalalas)}");
+            receiptLines.Add($"Net: {InvoiceQr.FormatSar(sale.NetHalalas)}");
+        }
+        else
+        {
+            receiptLines.Add($"Net: {InvoiceQr.FormatSar(sale.NetHalalas)}");
+        }
+
         receiptLines.Add($"VAT 15%: {InvoiceQr.FormatSar(sale.VatHalalas)}");
         receiptLines.Add($"Total: {InvoiceQr.FormatSar(sale.TotalHalalas)}");
 
