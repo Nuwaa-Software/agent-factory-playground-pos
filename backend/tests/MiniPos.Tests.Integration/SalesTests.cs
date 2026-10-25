@@ -359,4 +359,48 @@ public class SalesTests(PostgresFixture db) : ApiTestBase(db)
         voidedSale2!.Voided.Should().BeTrue();
         voidedSale2.VoidedAt.Should().BeCloseTo(firstVoidedAt!, TimeSpan.FromMilliseconds(1));
     }
+
+    [Fact]
+    public async Task Parallel_sales_on_same_product_respect_stock_and_number_uniqueness()
+    {
+        // Arrange: create a product with low stock (3)
+        var (client, product) = await ShopWithProductAsync(stock: 3);
+
+        // Act: fire 5 parallel CreateSale requests (qty = 1 each)
+        var tasks = Enumerable.Range(0, 5)
+            .Select(_ => client.PostAsJsonAsync("/api/pos/sales",
+                new CreateSaleCommand([new CreateSaleLine(product.Id, 1)])))
+            .ToArray();
+        var responses = await Task.WhenAll(tasks);
+
+        // Assert invariants (never exact 201/409 split — timing-dependent under optimistic concurrency)
+        var created = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
+        var conflict = responses.Count(r => r.StatusCode == HttpStatusCode.Conflict);
+
+        // No overselling: at most `stock` successes
+        created.Should().BeLessThanOrEqualTo(3);
+
+        // Every request returns either 201 or 409 — no other status codes
+        (created + conflict).Should().Be(5);
+
+        // No 500 errors
+        responses.Should().NotContain(r => (int)r.StatusCode >= 500);
+
+        // At least one must succeed (a 409 can only occur after some other request committed)
+        created.Should().BeGreaterThanOrEqualTo(1);
+
+        // Read back stock via /api/inventory/products
+        var products = await client.GetFromJsonAsync<List<ProductResponse>>("/api/inventory/products");
+        var singleProduct = products!.Single();
+        singleProduct.Stock.Should().Be(3 - created);
+        singleProduct.Stock.Should().BeGreaterThanOrEqualTo(0);
+
+        // All successful sales have distinct Number values
+        var saleNumbers = responses
+            .Where(r => r.StatusCode == HttpStatusCode.Created)
+            .Select(async r => (await r.Content.ReadFromJsonAsync<SaleResponse>())!.Number)
+            .Select(t => t.Result)
+            .ToArray();
+        saleNumbers.Distinct().Count().Should().Be(created);
+    }
 }
