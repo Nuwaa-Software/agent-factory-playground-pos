@@ -11,7 +11,7 @@ public sealed class ListCategoriesHandler(AppDbContext db) : IRequestHandler<Lis
     {
         return await db.Categories
             .OrderBy(c => c.NameEn)
-            .Select(c => new CategoryResponse(c.Id, c.NameEn, c.NameAr, c.Description))
+            .Select(c => new CategoryResponse(c.Id, c.NameEn, c.NameAr, c.Description, c.ParentId))
             .ToListAsync(cancellationToken);
     }
 }
