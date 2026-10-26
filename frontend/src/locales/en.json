@@ -38,6 +38,32 @@
   "nav": {
     "products": "Products",
     "sales": "Sales",
+    "shifts": "Shift",
     "signOut": "Sign out"
+  },
+  "shift": {
+    "title": "Shift",
+    "openTitle": "Open shift",
+    "closeTitle": "Close shift",
+    "cashierName": "Cashier name",
+    "startingCash": "Starting cash (SAR)",
+    "actualCash": "Actual cash (SAR)",
+    "open": "Open shift",
+    "close": "Close shift",
+    "opening": "Opening…",
+    "closing": "Closing…",
+    "opened": "Shift opened.",
+    "closed": "Shift closed.",
+    "openError": "The shift could not be opened. Try again.",
+    "closeError": "The shift could not be closed. Try again.",
+    "alreadyClosed": "The shift is already closed.",
+    "notFound": "The shift was not found.",
+    "loadError": "The shift could not be loaded.",
+    "cashier": "Cashier",
+    "openedAt": "Opened at",
+    "starting": "Starting cash",
+    "actual": "Actual cash",
+    "errRequired": "This field is required.",
+    "errMoney": "Enter a valid amount (e.g. 10.50)."
   }
 }
