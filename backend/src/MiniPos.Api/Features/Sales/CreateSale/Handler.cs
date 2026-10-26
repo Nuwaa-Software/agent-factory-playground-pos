@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MiniPos.Api.Features.Sales.GetSale;
 using MiniPos.Domain.Catalog;
 using MiniPos.Domain.Common;
+using MiniPos.Domain.Companies;
 using MiniPos.Domain.Sales;
 using MiniPos.Infrastructure.Persistence;
 using MiniPos.Infrastructure.Tenancy;
@@ -50,7 +51,8 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         }
 
         sale.NetHalalas = sale.Lines.Sum(l => l.LineNetHalalas);
-        sale.VatHalalas = Vat.Compute(sale.NetHalalas);
+        var taxRate = await GetTaxRate(cancellationToken);
+        sale.VatHalalas = Vat.Compute(sale.NetHalalas, taxRate);
         sale.TotalHalalas = sale.NetHalalas + sale.VatHalalas;
 
         // Update customer credit balance for credit sales
@@ -91,6 +93,16 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
 
         var company = await db.Companies.SingleAsync(c => c.Id == tenant.CompanyId, cancellationToken);
         return SaleResponse.From(sale, company);
+    }
+
+    private async Task<decimal> GetTaxRate(CancellationToken ct)
+    {
+        var config = await db.CompanyConfigs.FirstOrDefaultAsync(c => c.Key == CompanySettings.TaxRatePercentKey && c.CompanyId == tenant.CompanyId, ct);
+        if (config != null && decimal.TryParse(config.Value, out var rate))
+        {
+            return rate;
+        }
+        return CompanySettings.TaxRatePercentDefault;
     }
 
     [LoggerMessage(EventId = 2001, Level = LogLevel.Information, Message = "Sale {Number} created, total {TotalHalalas} halalas")]
