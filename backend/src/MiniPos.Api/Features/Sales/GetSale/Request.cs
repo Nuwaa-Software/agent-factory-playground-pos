@@ -35,7 +35,7 @@ public sealed record SaleResponse(
     string? SaleDiscountReason)
 {
     /// <summary>The QR seller name is the company's Arabic name, as on the printed simplified invoice.</summary>
-    public static SaleResponse From(Sale sale, Company company)
+    public static SaleResponse From(Sale sale, MiniPos.Domain.Companies.Company company)
     {
         ArgumentNullException.ThrowIfNull(sale);
         ArgumentNullException.ThrowIfNull(company);

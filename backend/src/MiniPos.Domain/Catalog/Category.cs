@@ -9,4 +9,7 @@ public sealed class Category : ITenantScoped
     public required string NameEn { get; set; }
     public required string NameAr { get; set; }
     public string? Description { get; set; }
+
+    /// <summary>Parent category for one-level hierarchy (null = root category).</summary>
+    public Guid? ParentId { get; set; }
 }

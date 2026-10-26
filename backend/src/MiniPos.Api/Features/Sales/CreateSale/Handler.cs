@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MiniPos.Api.Features.Sales.GetSale;
 using MiniPos.Domain.Catalog;
 using MiniPos.Domain.Common;
+using MiniPos.Domain.Companies;
 using MiniPos.Domain.Sales;
 using MiniPos.Infrastructure.Persistence;
 using MiniPos.Infrastructure.Tenancy;
@@ -93,8 +94,21 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         sale.SaleDiscountReason = saleDiscountReason;
 
         sale.NetHalalas = netHalalas;
-        sale.VatHalalas = Vat.Compute(netHalalas);
-        sale.TotalHalalas = netHalalas + sale.VatHalalas;
+        var taxRate = await GetTaxRate(cancellationToken);
+        sale.VatHalalas = Vat.Compute(sale.NetHalalas, taxRate);
+        sale.TotalHalalas = sale.NetHalalas + sale.VatHalalas;
+
+        // Update customer credit balance for credit sales
+        if (sale.PaymentType == PaymentType.Credit && request.CustomerId is not null)
+        {
+            var customer = await db.Customers.SingleOrDefaultAsync(
+                c => c.Id == request.CustomerId.Value, cancellationToken);
+            if (customer is null)
+            {
+                return new Error("sale.customer_not_found", "Customer not found.", ErrorKind.NotFound);
+            }
+            customer.CreditBalanceHalalas += sale.TotalHalalas;
+        }
 
         // Use a more robust approach to assign sale numbers that handles concurrency
         var maxNumber = await db.Sales.Where(s => s.CompanyId == tenant.CompanyId).MaxAsync(s => (int?)s.Number, cancellationToken);
@@ -154,6 +168,16 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
     {
         var config = await db.CompanyConfigs.Where(c => c.Key == key).FirstOrDefaultAsync(ct);
         return config != null && long.TryParse(config.Value, out var val) ? val : null;
+    }
+
+    private async Task<decimal> GetTaxRate(CancellationToken ct)
+    {
+        var config = await db.CompanyConfigs.FirstOrDefaultAsync(c => c.Key == CompanySettings.TaxRatePercentKey && c.CompanyId == tenant.CompanyId, ct);
+        if (config != null && decimal.TryParse(config.Value, out var rate))
+        {
+            return rate;
+        }
+        return CompanySettings.TaxRatePercentDefault;
     }
 
     [LoggerMessage(EventId = 2001, Level = LogLevel.Information, Message = "Sale {Number} created, total {TotalHalalas} halalas")]
