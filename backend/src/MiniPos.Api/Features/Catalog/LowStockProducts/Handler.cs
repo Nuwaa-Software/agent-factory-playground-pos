@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MiniPos.Api.Features.Common;
+using MiniPos.Domain.Catalog;
 using MiniPos.Domain.Common;
+using MiniPos.Domain.Companies;
 using MiniPos.Infrastructure.Persistence;
 
 namespace MiniPos.Api.Features.Catalog.LowStockProducts;
@@ -33,8 +35,7 @@ public sealed class LowStockProductsHandler(AppDbContext db) : IRequestHandler<L
     private async Task<int> GetThresholdFromConfig(CancellationToken cancellationToken)
     {
         var config = await db.CompanyConfigs
-            .Where(c => c.Key == "Pos:LowStockThreshold")
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(c => c.Key == CompanySettings.LowStockThresholdKey, cancellationToken);
 
         if (config != null && int.TryParse(config.Value, out int threshold))
         {
@@ -42,6 +43,6 @@ public sealed class LowStockProductsHandler(AppDbContext db) : IRequestHandler<L
         }
 
         // Default to 10 if not configured or parsing fails
-        return 10;
+        return CompanySettings.LowStockThresholdDefault;
     }
 }

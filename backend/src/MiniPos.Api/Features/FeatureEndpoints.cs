@@ -1,4 +1,6 @@
 using MiniPos.Api.Features.Catalog.LowStockProducts;
+using MiniPos.Api.Features.Company.GetSettings;
+using MiniPos.Api.Features.Company.UpdateSettings;
 using MiniPos.Api.Features.Customers.CreateCustomer;
 using MiniPos.Api.Features.Customers.ListCustomers;
 using MiniPos.Api.Features.Customers.UpdateCustomer;
@@ -37,5 +39,7 @@ public static class FeatureEndpoints
         CloseShiftEndpoint.Map(app);
         GetShiftEndpoint.Map(app);
         ListShiftsEndpoint.Map(app);
+        MiniPos.Api.Features.Company.GetSettings.Endpoint.Map(app);
+        MiniPos.Api.Features.Company.UpdateSettings.Endpoint.Map(app);
     }
 }

@@ -15,7 +15,7 @@ public sealed record SaleResponse(Guid Id, int Number, DateTimeOffset CreatedAt,
     long NetHalalas, long VatHalalas, long TotalHalalas, string QrCode, bool Voided, DateTimeOffset? VoidedAt, PaymentType PaymentType, Guid? CustomerId)
 {
     /// <summary>The QR seller name is the company's Arabic name, as on the printed simplified invoice.</summary>
-    public static SaleResponse From(Sale sale, Company company)
+    public static SaleResponse From(Sale sale, MiniPos.Domain.Companies.Company company)
     {
         ArgumentNullException.ThrowIfNull(sale);
         ArgumentNullException.ThrowIfNull(company);

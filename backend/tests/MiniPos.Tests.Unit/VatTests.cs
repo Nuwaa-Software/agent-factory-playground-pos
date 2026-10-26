@@ -22,4 +22,34 @@ public class VatTests
     [Fact]
     public void Negative_net_is_rejected() =>
         FluentActions.Invoking(() => Vat.Compute(-1)).Should().Throw<ArgumentOutOfRangeException>();
+
+    // Tests for the decimal-rate overload
+    [Fact]
+    public void Vat_compute_with_rate_10_percent() =>
+        Vat.Compute(1000, 10m).Should().Be(100);
+
+    [Fact]
+    public void Vat_compute_with_rate_20_percent() =>
+        Vat.Compute(1000, 20m).Should().Be(200);
+
+    [Fact]
+    public void Vat_compute_with_rate_15_percent() =>
+        Vat.Compute(3333, 15m).Should().Be(500);
+
+    [Fact]
+    public void Vat_compute_with_rate_small_net() =>
+        Vat.Compute(7, 10m).Should().Be(1);
+
+    [Fact]
+    public void Vat_compute_with_rate_rounds_half_up()
+    {
+        // 10% of 5 = 0.5 halalas -> rounds up to 1
+        Vat.Compute(5, 10.0m).Should().Be(1);
+        // 10% of 4 = 0.4 halalas -> rounds down to 0
+        Vat.Compute(4, 10.0m).Should().Be(0);
+    }
+
+    [Fact]
+    public void Vat_compute_with_rate_negative_net_is_rejected() =>
+        FluentActions.Invoking(() => Vat.Compute(-1, 10.0m)).Should().Throw<ArgumentOutOfRangeException>();
 }
