@@ -1,4 +1,7 @@
+using System.Globalization;
+using System.Security.Claims;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using MiniPos.Api.Auth;
 using MiniPos.Api.Common;
 using MiniPos.Api.Validation;
@@ -8,9 +11,20 @@ namespace MiniPos.Api.Features.Sales.CreateSale;
 public static class Endpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPost("/api/pos/sales", async (CreateSaleCommand command, ISender sender, CancellationToken ct) =>
-                (await sender.Send(command, ct)).ToHttp(s => Results.Created($"/api/pos/sales/{s.Id}", s)))
-            .AddEndpointFilter<ValidationFilter<CreateSaleCommand>>()
-            .RequireAuthorization(Policies.PosCashier)
-            .WithName("CreateSale");
+        app.MapPost("/api/pos/sales", async (CreateSaleCommand command, HttpContext httpContext, ISender sender, CancellationToken ct) =>
+        {
+            // Admin-only check for discounts: if any discount is present and the user is not admin, reject with 403
+            var role = httpContext.User.FindFirstValue(ClaimTypes.Role);
+            bool hasDiscount = command.Lines.Any(l => l.Discount is not null) || command.SaleDiscount is not null;
+            if (hasDiscount && role != Roles.Admin)
+            {
+                return Results.Forbid();
+            }
+
+            var result = await sender.Send(command, ct);
+            return result.ToHttp(s => Results.Created($"/api/pos/sales/{s.Id}", s));
+        })
+        .AddEndpointFilter<ValidationFilter<CreateSaleCommand>>()
+        .RequireAuthorization(Policies.PosCashier)
+        .WithName("CreateSale");
 }

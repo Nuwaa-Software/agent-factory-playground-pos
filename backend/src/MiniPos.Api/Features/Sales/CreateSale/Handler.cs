@@ -13,9 +13,17 @@ namespace MiniPos.Api.Features.Sales.CreateSale;
 public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext tenant, TimeProvider clock,
     ILogger<CreateSaleHandler> logger) : IRequestHandler<CreateSaleCommand, Result<SaleResponse>>
 {
+    private const string ConfigMaxDiscountPercent = "Pos:MaxDiscountPercent";
+    private const string ConfigMaxDiscountFixedHalalas = "Pos:MaxDiscountFixedHalalas";
+
     public async Task<Result<SaleResponse>> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // Load discount limits from config (null = no cap)
+        var maxPercent = await GetConfigInt(ConfigMaxDiscountPercent, cancellationToken);
+        var maxFixedHalalas = await GetConfigLong(ConfigMaxDiscountFixedHalalas, cancellationToken);
+
         var ids = request.Lines.Select(l => l.ProductId).ToList();
         var products = await db.Products.Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken);
 
@@ -26,6 +34,7 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
             PaymentType = request.PaymentType ?? PaymentType.Cash,
             CustomerId = request.CustomerId,
         };
+
         foreach (var line in request.Lines)
         {
             if (!products.TryGetValue(line.ProductId, out var product))
@@ -40,6 +49,19 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
             }
 
             product.Stock -= line.Quantity;
+
+            long discountHalalas = 0;
+            string? discountReason = null;
+
+            if (line.Discount is not null)
+            {
+                var resolved = ResolveLineDiscount(product.PriceHalalas, line.Quantity, line.Discount.Value, line.Discount.Type, maxPercent, maxFixedHalalas);
+                if (!resolved.IsSuccess)
+                    return resolved.Error!;
+                discountHalalas = resolved.Value;
+                discountReason = line.Discount.Reason;
+            }
+
             sale.Lines.Add(new SaleLine
             {
                 ProductId = product.Id,
@@ -47,10 +69,31 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
                 ProductNameAr = product.NameAr,
                 Quantity = line.Quantity,
                 UnitPriceHalalas = product.PriceHalalas,
+                DiscountHalalas = discountHalalas,
+                DiscountReason = discountReason,
             });
         }
 
-        sale.NetHalalas = sale.Lines.Sum(l => l.LineNetHalalas);
+        // Compute sale-level discount
+        long saleDiscountHalalas = 0;
+        string? saleDiscountReason = null;
+
+        if (request.SaleDiscount is not null)
+        {
+            var lineNetSum = sale.Lines.Sum(l => l.LineNetHalalas);
+            var resolved = ResolveSaleDiscount(lineNetSum, request.SaleDiscount.Value, request.SaleDiscount.Type, maxPercent, maxFixedHalalas);
+            if (!resolved.IsSuccess)
+                return resolved.Error!;
+            saleDiscountHalalas = resolved.Value;
+            saleDiscountReason = request.SaleDiscount.Reason;
+        }
+
+        // Compute totals: net floored at 0, then VAT on net, then total
+        long netHalalas = Math.Max(0, sale.Lines.Sum(l => l.LineNetHalalas) - saleDiscountHalalas);
+        sale.SaleDiscountHalalas = saleDiscountHalalas;
+        sale.SaleDiscountReason = saleDiscountReason;
+
+        sale.NetHalalas = netHalalas;
         var taxRate = await GetTaxRate(cancellationToken);
         sale.VatHalalas = Vat.Compute(sale.NetHalalas, taxRate);
         sale.TotalHalalas = sale.NetHalalas + sale.VatHalalas;
@@ -84,7 +127,6 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pgEx && pgEx.SqlState == "23505")
         {
             // Handle the unique constraint violation for sale number
-            // Clear the change tracker to avoid EF Core tracking issues after a failed save
             db.ChangeTracker.Clear();
             return Result<SaleResponse>.Failure(
                 new Error("sale.number_conflict", "Another sale was created at the same time. Please retry.", ErrorKind.Conflict));
@@ -93,6 +135,39 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
 
         var company = await db.Companies.SingleAsync(c => c.Id == tenant.CompanyId, cancellationToken);
         return SaleResponse.From(sale, company);
+    }
+
+    private static Result<long> ResolveLineDiscount(
+        long unitPriceHalalas, int quantity, long value, DiscountType type,
+        int? maxPercent, long? maxFixedHalalas)
+    {
+        var originalAmount = unitPriceHalalas * quantity;
+        var resolvedValue = type == DiscountType.Percent
+            ? DiscountResolver.PercentToHalalas(originalAmount, (int)value)
+            : value;
+        return DiscountResolver.Resolve(originalAmount, resolvedValue, maxPercent, maxFixedHalalas);
+    }
+
+    private static Result<long> ResolveSaleDiscount(
+        long lineNetSum, long value, DiscountType type,
+        int? maxPercent, long? maxFixedHalalas)
+    {
+        var resolvedValue = type == DiscountType.Percent
+            ? DiscountResolver.PercentToHalalas(lineNetSum, (int)value)
+            : value;
+        return DiscountResolver.Resolve(lineNetSum, resolvedValue, maxPercent, maxFixedHalalas);
+    }
+
+    private async Task<int?> GetConfigInt(string key, CancellationToken ct)
+    {
+        var config = await db.CompanyConfigs.Where(c => c.Key == key).FirstOrDefaultAsync(ct);
+        return config != null && int.TryParse(config.Value, out var val) ? val : null;
+    }
+
+    private async Task<long?> GetConfigLong(string key, CancellationToken ct)
+    {
+        var config = await db.CompanyConfigs.Where(c => c.Key == key).FirstOrDefaultAsync(ct);
+        return config != null && long.TryParse(config.Value, out var val) ? val : null;
     }
 
     private async Task<decimal> GetTaxRate(CancellationToken ct)

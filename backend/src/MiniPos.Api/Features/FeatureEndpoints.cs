@@ -9,6 +9,7 @@ using MiniPos.Api.Features.Customers.RecordPayment;
 using MiniPos.Api.Features.Customers.UpdateCustomer;
 using MiniPos.Api.Features.Reports.DailySales;
 using MiniPos.Api.Features.Reports.SalesAnalytics;
+using MiniPos.Api.Features.Sales.DiscountLimits;
 using MiniPos.Api.Features.Sales.GetReceipt;
 using MiniPos.Api.Features.Sales.VoidSale;
 using MiniPos.Api.Features.Sales.ListSales;
@@ -37,6 +38,7 @@ public static class FeatureEndpoints
         Sales.GetReceipt.Endpoint.Map(app);
         Sales.VoidSale.Endpoint.Map(app);
         Sales.ListSales.Endpoint.Map(app);
+        Sales.DiscountLimits.Endpoint.Map(app);
         Reports.DailySales.Endpoint.Map(app);
         Reports.SalesAnalytics.Endpoint.Map(app);
         Customers.CreateCustomer.Endpoint.Map(app);
