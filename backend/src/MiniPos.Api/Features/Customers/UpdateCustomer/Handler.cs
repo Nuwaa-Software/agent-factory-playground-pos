@@ -25,6 +25,6 @@ public sealed class UpdateCustomerHandler(AppDbContext db)
 
         await db.SaveChangesAsync(cancellationToken);
 
-        return new CustomerResponse(customer.Id, customer.Name, customer.Phone);
+        return new CustomerResponse(customer.Id, customer.Name, customer.Phone, customer.CreditBalanceHalalas);
     }
 }
