@@ -6,6 +6,7 @@ using MiniPos.Domain.Companies;
 using MiniPos.Domain.Customers;
 using MiniPos.Domain.Sales;
 using MiniPos.Domain.Shifts;
+using MiniPos.Domain.Users;
 using MiniPos.Infrastructure.Tenancy;
 
 namespace MiniPos.Infrastructure.Persistence;
@@ -25,6 +26,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<Shift> Shifts => Set<Shift>();
 
     public DbSet<CompanyConfig> CompanyConfigs => Set<CompanyConfig>();
+
+    public DbSet<User> Users => Set<User>();
 
     /// <summary>Read by the global query filters below, per DbContext instance (i.e. per request).</summary>
     public Guid CurrentCompanyId => tenant.CompanyId;
@@ -64,8 +67,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
                 l.WithOwner().HasForeignKey("SaleId");
                 l.Property(x => x.ProductNameEn).HasMaxLength(200);
                 l.Property(x => x.ProductNameAr).HasMaxLength(200);
+                l.Property(x => x.DiscountHalalas).HasColumnName("DiscountHalalas");
+                l.Property(x => x.DiscountReason).HasMaxLength(512);
                 l.Ignore(x => x.LineNetHalalas);
             });
+            b.Property(s => s.SaleDiscountHalalas).HasDefaultValue(0L);
+            b.Property(s => s.SaleDiscountReason).HasMaxLength(512);
         });
 
         modelBuilder.Entity<Shift>(b =>
@@ -85,6 +92,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         {
             b.Property(c => c.Name).HasMaxLength(200);
             b.Property(c => c.Phone).HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<User>(b =>
+        {
+            b.Property(u => u.NameEn).HasMaxLength(200);
+            b.Property(u => u.NameAr).HasMaxLength(200);
+            b.HasIndex(u => u.CompanyId);
         });
 
         // Multi-tenancy, read side: every ITenantScoped entity only ever returns the current company's rows.

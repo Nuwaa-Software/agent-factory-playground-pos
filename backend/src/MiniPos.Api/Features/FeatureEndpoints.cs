@@ -1,13 +1,22 @@
+using MiniPos.Api.Features.Catalog.DeleteCategory;
 using MiniPos.Api.Features.Catalog.LowStockProducts;
+using MiniPos.Api.Features.Company.GetSettings;
+using MiniPos.Api.Features.Company.UpdateSettings;
 using MiniPos.Api.Features.Customers.CreateCustomer;
+using MiniPos.Api.Features.Customers.GetCustomer;
 using MiniPos.Api.Features.Customers.ListCustomers;
+using MiniPos.Api.Features.Customers.RecordPayment;
 using MiniPos.Api.Features.Customers.UpdateCustomer;
 using MiniPos.Api.Features.Reports.DailySales;
 using MiniPos.Api.Features.Reports.SalesAnalytics;
+using MiniPos.Api.Features.Sales.DiscountLimits;
 using MiniPos.Api.Features.Sales.GetReceipt;
 using MiniPos.Api.Features.Sales.VoidSale;
 using MiniPos.Api.Features.Sales.ListSales;
 using MiniPos.Api.Features.Shifts;
+using MiniPos.Api.Features.Users.CreateUser;
+using MiniPos.Api.Features.Users.ListUsers;
+using MiniPos.Api.Features.Users.UpdateUser;
 
 namespace MiniPos.Api.Features;
 
@@ -23,19 +32,28 @@ public static class FeatureEndpoints
         Catalog.CreateCategory.CreateCategoryEndpoint.Map(app);
         Catalog.UpdateCategory.UpdateCategoryEndpoint.Map(app);
         Catalog.ListCategories.ListCategoriesEndpoint.Map(app);
+        Catalog.DeleteCategory.DeleteCategoryEndpoint.Map(app);
         Sales.CreateSale.Endpoint.Map(app);
         Sales.GetSale.Endpoint.Map(app);
         Sales.GetReceipt.Endpoint.Map(app);
         Sales.VoidSale.Endpoint.Map(app);
         Sales.ListSales.Endpoint.Map(app);
+        Sales.DiscountLimits.Endpoint.Map(app);
         Reports.DailySales.Endpoint.Map(app);
         Reports.SalesAnalytics.Endpoint.Map(app);
         Customers.CreateCustomer.Endpoint.Map(app);
+        Customers.GetCustomer.Endpoint.Map(app);
         Customers.UpdateCustomer.Endpoint.Map(app);
         Customers.ListCustomers.Endpoint.Map(app);
+        Users.CreateUser.Endpoint.Map(app);
+        Users.ListUsers.Endpoint.Map(app);
+        Users.UpdateUser.Endpoint.Map(app);
+        Customers.RecordPayment.Endpoint.Map(app);
         OpenShiftEndpoint.Map(app);
         CloseShiftEndpoint.Map(app);
         GetShiftEndpoint.Map(app);
         ListShiftsEndpoint.Map(app);
+        MiniPos.Api.Features.Company.GetSettings.Endpoint.Map(app);
+        MiniPos.Api.Features.Company.UpdateSettings.Endpoint.Map(app);
     }
 }

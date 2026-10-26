@@ -17,6 +17,12 @@ public sealed class Sale : ITenantScoped
     /// <summary>Sum of line net amounts, VAT excluded.</summary>
     public long NetHalalas { get; set; }
 
+    /// <summary>Sale-level discount amount in halalas (0 = no discount).</summary>
+    public long SaleDiscountHalalas { get; set; }
+
+    /// <summary>Reason for the sale-level discount.</summary>
+    public string? SaleDiscountReason { get; set; }
+
     public long VatHalalas { get; set; }
 
     public long TotalHalalas { get; set; }
@@ -44,5 +50,11 @@ public sealed class SaleLine
 
     public long UnitPriceHalalas { get; init; }
 
-    public long LineNetHalalas => UnitPriceHalalas * Quantity;
+    /// <summary>Discount amount in halalas (0 = no discount).</summary>
+    public long DiscountHalalas { get; set; }
+
+    /// <summary>Reason for the line-level discount.</summary>
+    public string? DiscountReason { get; set; }
+
+    public long LineNetHalalas => Math.Max(0, UnitPriceHalalas * Quantity - DiscountHalalas);
 }

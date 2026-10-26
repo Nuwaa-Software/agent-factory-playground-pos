@@ -26,6 +26,12 @@ public sealed class HeaderAuthenticationHandler(
         }
 
         Claim[] claims = [new(Claims.CompanyId, companyId.ToString()), new(ClaimTypes.Role, role.ToString())];
+
+        if (Request.Headers.TryGetValue("X-User-Name", out var userName) && !string.IsNullOrEmpty(userName))
+        {
+            claims = [.. claims, new(Claims.UserName, userName!)];
+        }
+
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
     }
@@ -34,6 +40,7 @@ public sealed class HeaderAuthenticationHandler(
 public static class Claims
 {
     public const string CompanyId = "company_id";
+    public const string UserName = "user_name";
 }
 
 public static class Roles
