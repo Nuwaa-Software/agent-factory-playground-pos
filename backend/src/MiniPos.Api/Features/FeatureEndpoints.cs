@@ -1,3 +1,4 @@
+using MiniPos.Api.Features.Catalog.DeleteCategory;
 using MiniPos.Api.Features.Catalog.LowStockProducts;
 using MiniPos.Api.Features.Company.GetSettings;
 using MiniPos.Api.Features.Company.UpdateSettings;
@@ -27,6 +28,7 @@ public static class FeatureEndpoints
         Catalog.CreateCategory.CreateCategoryEndpoint.Map(app);
         Catalog.UpdateCategory.UpdateCategoryEndpoint.Map(app);
         Catalog.ListCategories.ListCategoriesEndpoint.Map(app);
+        Catalog.DeleteCategory.DeleteCategoryEndpoint.Map(app);
         Sales.CreateSale.Endpoint.Map(app);
         Sales.GetSale.Endpoint.Map(app);
         Sales.GetReceipt.Endpoint.Map(app);
