@@ -25,6 +25,6 @@ public sealed class CreateCustomerHandler(AppDbContext db, ITenantContext tenant
         db.Customers.Add(customer);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new CustomerResponse(customer.Id, customer.Name, customer.Phone);
+        return new CustomerResponse(customer.Id, customer.Name, customer.Phone, customer.CreditBalanceHalalas);
     }
 }

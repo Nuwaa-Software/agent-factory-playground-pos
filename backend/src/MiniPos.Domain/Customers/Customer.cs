@@ -11,4 +11,6 @@ public sealed class Customer : ITenantScoped
     public required string Name { get; set; }
 
     public string? Phone { get; set; }
+
+    public long CreditBalanceHalalas { get; set; }
 }
