@@ -11,4 +11,10 @@ public static class CompanySettings
 
     public const string LowStockThresholdKey = "Pos:LowStockThreshold";
     public const int LowStockThresholdDefault = 10;
+
+    public const string CompanyNameKey = "Pos:CompanyName";
+    public const string CompanyNameDefault = "";
+
+    public const string VatRegistrationNumberKey = "Pos:VatRegistrationNumber";
+    public const string VatRegistrationNumberDefault = "";
 }

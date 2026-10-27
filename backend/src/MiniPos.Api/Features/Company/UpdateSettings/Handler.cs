@@ -29,6 +29,16 @@ public sealed class UpdateSettingsHandler(AppDbContext db, ITenantContext tenant
             await UpsertSetting(db, MiniPos.Domain.Companies.CompanySettings.LowStockThresholdKey, request.LowStockThreshold.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), cancellationToken);
         }
 
+        if (request.CompanyName is not null)
+        {
+            await UpsertSetting(db, MiniPos.Domain.Companies.CompanySettings.CompanyNameKey, request.CompanyName, cancellationToken);
+        }
+
+        if (request.VatRegistrationNumber is not null)
+        {
+            await UpsertSetting(db, MiniPos.Domain.Companies.CompanySettings.VatRegistrationNumberKey, request.VatRegistrationNumber, cancellationToken);
+        }
+
         // Persist changes before reading back
         await db.SaveChangesAsync(cancellationToken);
 
@@ -36,8 +46,10 @@ public sealed class UpdateSettingsHandler(AppDbContext db, ITenantContext tenant
         var taxRate = await GetDecimalSetting(MiniPos.Domain.Companies.CompanySettings.TaxRatePercentKey, MiniPos.Domain.Companies.CompanySettings.TaxRatePercentDefault, cancellationToken);
         var footerText = await GetStringSetting(MiniPos.Domain.Companies.CompanySettings.ReceiptFooterTextKey, MiniPos.Domain.Companies.CompanySettings.ReceiptFooterTextDefault, cancellationToken);
         var lowStockThreshold = await GetIntSetting(MiniPos.Domain.Companies.CompanySettings.LowStockThresholdKey, MiniPos.Domain.Companies.CompanySettings.LowStockThresholdDefault, cancellationToken);
+        var companyName = await GetStringSetting(MiniPos.Domain.Companies.CompanySettings.CompanyNameKey, MiniPos.Domain.Companies.CompanySettings.CompanyNameDefault, cancellationToken);
+        var vatRegistrationNumber = await GetStringSetting(MiniPos.Domain.Companies.CompanySettings.VatRegistrationNumberKey, MiniPos.Domain.Companies.CompanySettings.VatRegistrationNumberDefault, cancellationToken);
 
-        return Result<CompanySettingsResponse>.Success(new CompanySettingsResponse(taxRate, footerText, lowStockThreshold));
+        return Result<CompanySettingsResponse>.Success(new CompanySettingsResponse(taxRate, footerText, lowStockThreshold, companyName, vatRegistrationNumber));
     }
 
     private async Task UpsertSetting(AppDbContext db, string key, string value, CancellationToken ct)
