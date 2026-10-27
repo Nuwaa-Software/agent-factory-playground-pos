@@ -1,6 +1,6 @@
 {
   "app": { "name": "ميني بوس", "mainNav": "التنقل الرئيسي" },
-  "nav": { "products": "المنتجات", "sales": "المبيعات", "signOut": "تسجيل الخروج", "pos": "نقطة البيع" },
+  "nav": { "products": "المنتجات", "sales": "المبيعات", "pos": "نقطة البيع", "shifts": "الوردية", "signOut": "تسجيل الخروج" },
   "language": { "switchTo": "English" },
   "common": { "loading": "جارٍ التحميل…", "retry": "إعادة المحاولة" },
   "money": { "sar": "{{amount}} ر.س" },
@@ -35,6 +35,15 @@
     "prevPage": "السابقة",
     "nextPage": "التالية"
   },
+  "receipt": {
+    "title": "الإيصال",
+    "loadError": "تعذّر تحميل الإيصال.",
+    "notFound": "لم يتم العثور على الفاتورة.",
+    "qrTitle": "رمز QR (ZATCA)",
+    "copy": "نسخ",
+    "copied": "تم النسخ",
+    "back": "رجوع"
+  },
   "pos": {
     "title": "نقطة البيع",
     "searchLabel": "بحث عن منتج",
@@ -64,13 +73,6 @@
     "successTotal": "الإجمالي: {{amount}}",
     "viewReceipt": "عرض الإيصال",
     "newSale": "عملية جديدة"
-  },
-  "nav": {
-    "products": "المنتجات",
-    "sales": "المبيعات",
-    "pos": "نقطة البيع",
-    "shifts": "الوردية",
-    "signOut": "تسجيل الخروج"
   },
   "shift": {
     "title": "الوردية",

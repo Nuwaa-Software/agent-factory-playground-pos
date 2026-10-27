@@ -1,6 +1,6 @@
 {
   "app": { "name": "MiniPos", "mainNav": "Main navigation" },
-  "nav": { "products": "Products", "sales": "Sales", "signOut": "Sign out", "pos": "POS" },
+  "nav": { "products": "Products", "sales": "Sales", "pos": "POS", "shifts": "Shift", "signOut": "Sign out" },
   "language": { "switchTo": "العربية" },
   "common": { "loading": "Loading…", "retry": "Try again" },
   "money": { "sar": "SAR {{amount}}" },
@@ -35,6 +35,15 @@
     "prevPage": "Previous",
     "nextPage": "Next"
   },
+  "receipt": {
+    "title": "Receipt",
+    "loadError": "The receipt could not be loaded.",
+    "notFound": "The invoice was not found.",
+    "qrTitle": "QR code (ZATCA)",
+    "copy": "Copy",
+    "copied": "Copied",
+    "back": "Back"
+  },
   "pos": {
     "title": "POS",
     "searchLabel": "Search product",
@@ -64,13 +73,6 @@
     "successTotal": "Total: {{amount}}",
     "viewReceipt": "View receipt",
     "newSale": "New sale"
-  },
-  "nav": {
-    "products": "Products",
-    "sales": "Sales",
-    "pos": "POS",
-    "shifts": "Shift",
-    "signOut": "Sign out"
   },
   "shift": {
     "title": "Shift",
