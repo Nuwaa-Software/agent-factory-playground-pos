@@ -74,6 +74,16 @@
     "viewReceipt": "View receipt",
     "newSale": "New sale"
   },
+  "report": {
+    "title": "Daily sales report",
+    "dateLabel": "Date",
+    "saleCount": "Sales",
+    "net": "Net",
+    "vat": "VAT",
+    "gross": "Gross",
+    "empty": "No sales on this date.",
+    "loadError": "The report could not be loaded."
+  },
   "shift": {
     "title": "Shift",
     "openTitle": "Open shift",
