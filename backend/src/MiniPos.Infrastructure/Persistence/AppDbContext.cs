@@ -73,6 +73,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             });
             b.Property(s => s.SaleDiscountHalalas).HasDefaultValue(0L);
             b.Property(s => s.SaleDiscountReason).HasMaxLength(512);
+            b.OwnsMany(s => s.PaymentBreakdown, e =>
+            {
+                e.WithOwner().HasForeignKey("SaleId");
+                e.Property(x => x.PaymentType).HasConversion<long>();
+                e.Property(x => x.AmountHalalas);
+            });
         });
 
         modelBuilder.Entity<Shift>(b =>
