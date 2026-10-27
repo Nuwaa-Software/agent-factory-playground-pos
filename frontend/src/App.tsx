@@ -3,7 +3,9 @@ import Layout from './components/Layout';
 import RequireSession from './components/RequireSession';
 import ProductsPage from './pages/ProductsPage';
 import ReceiptPage from './pages/ReceiptPage';
+import PosPage from './pages/PosPage';
 import SalesPage from './pages/SalesPage';
+import ShiftsPage from './pages/ShiftsPage';
 import SignInPage from './pages/SignInPage';
 
 export default function App() {
@@ -15,6 +17,8 @@ export default function App() {
           <Route path="products" element={<ProductsPage />} />
           <Route path="sales" element={<SalesPage />} />
           <Route path="sales/:id/receipt" element={<ReceiptPage />} />
+          <Route path="pos" element={<PosPage />} />
+          <Route path="shifts" element={<ShiftsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/products" replace />} />
       </Route>
