@@ -7,6 +7,7 @@ import PosPage from './pages/PosPage';
 import SalesPage from './pages/SalesPage';
 import ShiftsPage from './pages/ShiftsPage';
 import SignInPage from './pages/SignInPage';
+import ProductCreatePage from './pages/ProductCreatePage';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="sales/:id/receipt" element={<ReceiptPage />} />
           <Route path="pos" element={<PosPage />} />
           <Route path="shifts" element={<ShiftsPage />} />
+          <Route path="products/new" element={<ProductCreatePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/products" replace />} />
       </Route>
