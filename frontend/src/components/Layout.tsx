@@ -31,6 +31,9 @@ export default function Layout() {
             <NavLink to="/pos" className={navLink}>
               {t('nav.pos')}
             </NavLink>
+            <NavLink to="/shifts" className={navLink}>
+              {t('nav.shifts')}
+            </NavLink>
           </nav>
         )}
         <div className="ms-auto flex gap-2">
