@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from './client';
+import { apiGet, apiGetText } from './client';
 
 /** `SaleSummary` of the API (backend/src/MiniPos.Api/Features/Sales/ListSales/Request.cs). */
 export interface SaleSummary {
@@ -19,9 +19,30 @@ export interface SalesListResponse {
   totalPages: number;
 }
 
+/** Minimal `SaleResponse` shape from the API (backend/src/MiniPos.Api/Features/Sales/GetSale/Request.cs). */
+export interface SaleResponse {
+  id: string;
+  number: number;
+  qrCode: string;
+}
+
 export function useSales(page: number = 1) {
   return useQuery({
     queryKey: ['sales', page],
     queryFn: () => apiGet<SalesListResponse>(`/api/pos/sales?page=${page}&pageSize=20`),
+  });
+}
+
+/** Load a sale's JSON and its receipt text in parallel. */
+export function useReceipt(id: string) {
+  return useQuery({
+    queryKey: ['receipt', id],
+    queryFn: async () => {
+      const [sale, receiptText] = await Promise.all([
+        apiGet<SaleResponse>(`/api/pos/sales/${id}`),
+        apiGetText(`/api/pos/sales/${id}/receipt`),
+      ]);
+      return { sale, receiptText };
+    },
   });
 }

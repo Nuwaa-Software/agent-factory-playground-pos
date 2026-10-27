@@ -35,6 +35,15 @@
     "prevPage": "Previous",
     "nextPage": "Next"
   },
+  "receipt": {
+    "title": "Receipt",
+    "loadError": "The receipt could not be loaded.",
+    "notFound": "The invoice was not found.",
+    "qrTitle": "QR code (ZATCA)",
+    "copy": "Copy",
+    "copied": "Copied",
+    "back": "Back"
+  },
   "nav": {
     "products": "Products",
     "sales": "Sales",

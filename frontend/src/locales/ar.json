@@ -35,6 +35,15 @@
     "prevPage": "السابقة",
     "nextPage": "التالية"
   },
+  "receipt": {
+    "title": "الإيصال",
+    "loadError": "تعذّر تحميل الإيصال.",
+    "notFound": "لم يتم العثور على الفاتورة.",
+    "qrTitle": "رمز QR (ZATCA)",
+    "copy": "نسخ",
+    "copied": "تم النسخ",
+    "back": "رجوع"
+  },
   "nav": {
     "products": "المنتجات",
     "sales": "المبيعات",

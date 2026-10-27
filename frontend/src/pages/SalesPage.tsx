@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSales } from '../api/sales';
 import { formatSar } from '../lib/money';
 
@@ -46,6 +47,7 @@ export default function SalesPage() {
                 <th scope="col" className="p-2 text-end">{t('sales.net')}</th>
                 <th scope="col" className="p-2 text-end">{t('sales.vat')}</th>
                 <th scope="col" className="p-2 text-end">{t('sales.total')}</th>
+                <th scope="col" className="p-2 text-start">{t('receipt.title')}</th>
               </tr>
             </thead>
             <tbody>
@@ -60,6 +62,9 @@ export default function SalesPage() {
                     <td className="p-2 text-end">{t('money.sar', { amount: formatSar(sale.netHalalas) })}</td>
                     <td className="p-2 text-end">{t('money.sar', { amount: formatSar(sale.vatHalalas) })}</td>
                     <td className="p-2 text-end">{t('money.sar', { amount: formatSar(sale.totalHalalas) })}</td>
+                    <td className="p-2 text-start">
+                      <Link to={`/sales/${sale.id}/receipt`}>{t('receipt.title')}</Link>
+                    </td>
                   </tr>
                 );
               })}
