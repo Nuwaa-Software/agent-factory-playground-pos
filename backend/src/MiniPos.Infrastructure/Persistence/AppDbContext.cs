@@ -73,6 +73,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             });
             b.Property(s => s.SaleDiscountHalalas).HasDefaultValue(0L);
             b.Property(s => s.SaleDiscountReason).HasMaxLength(512);
+            b.Property(s => s.VoidReason).HasMaxLength(500);
         });
 
         modelBuilder.Entity<Shift>(b =>

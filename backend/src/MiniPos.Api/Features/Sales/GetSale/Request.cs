@@ -32,7 +32,8 @@ public sealed record SaleResponse(
     PaymentType PaymentType,
     Guid? CustomerId,
     long SaleDiscountHalalas,
-    string? SaleDiscountReason)
+    string? SaleDiscountReason,
+    string? VoidReason)
 {
     /// <summary>The QR seller name is the company's Arabic name, as on the printed simplified invoice.</summary>
     public static SaleResponse From(Sale sale, MiniPos.Domain.Companies.Company company)
@@ -47,6 +48,6 @@ public sealed record SaleResponse(
             sale.NetHalalas, sale.VatHalalas, sale.TotalHalalas,
             InvoiceQr.Encode(company.NameAr, company.VatNumber, sale.CreatedAt, sale.TotalHalalas, sale.VatHalalas),
             sale.Voided, sale.VoidedAt, sale.PaymentType, sale.CustomerId,
-            sale.SaleDiscountHalalas, sale.SaleDiscountReason);
+            sale.SaleDiscountHalalas, sale.SaleDiscountReason, sale.VoidReason);
     }
 }

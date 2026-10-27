@@ -44,6 +44,7 @@ public sealed class VoidSaleHandler(AppDbContext db, ITenantContext tenant, Time
 
         sale.Voided = true;
         sale.VoidedAt = clock.GetUtcNow();
+        sale.VoidReason = request.Reason;
 
         await db.SaveChangesAsync(cancellationToken);
 

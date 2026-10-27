@@ -31,6 +31,9 @@ public sealed class Sale : ITenantScoped
 
     public DateTimeOffset? VoidedAt { get; set; }
 
+    /// <summary>Reason provided by the operator when voiding the sale.</summary>
+    public string? VoidReason { get; set; }
+
     public PaymentType PaymentType { get; set; } = PaymentType.Cash;
 
     public Guid? CustomerId { get; set; }
