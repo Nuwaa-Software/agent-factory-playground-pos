@@ -98,5 +98,22 @@
     "actual": "Actual cash",
     "errRequired": "This field is required.",
     "errMoney": "Enter a valid amount (e.g. 10.50)."
+  },
+  "void": {
+    "title": "Void",
+    "confirmTitle": "Void this sale?",
+    "saleNumber": "Invoice #",
+    "date": "Date",
+    "total": "Total",
+    "reasonLabel": "Reason (not saved)",
+    "reasonPlaceholder": "Why are you voiding this sale?",
+    "confirm": "Void sale",
+    "voiding": "Voiding…",
+    "success": "Sale voided.",
+    "error": "The sale could not be voided. Try again.",
+    "alreadyVoided": "This sale is already voided.",
+    "windowExpired": "This sale is outside the void window and cannot be voided.",
+    "notFound": "The sale was not found.",
+    "forbidden": "You do not have permission to void sales."
   }
 }
