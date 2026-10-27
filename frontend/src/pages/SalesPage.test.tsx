@@ -1,4 +1,6 @@
-import { screen } from '@testing-library/react';
+import { screen, fireEvent, renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useSales } from '../api/sales';
 import userEvent from '@testing-library/user-event';
 import { axe } from '../test/axe';
 import i18n from '../i18n';
@@ -183,5 +185,140 @@ describe('SalesPage', () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  it('renders date filter inputs with labels above the table', async () => {
+    renderWithProviders(<SalesPage />);
+
+    // Wait for data to load so the page renders fully
+    await screen.findByText('رقم الفاتورة');
+
+    expect(screen.getByLabelText('من')).toBeInTheDocument();
+    expect(screen.getByLabelText('إلى')).toBeInTheDocument();
+  });
+
+  it('applies filter and sends from/to params, resets to page 1', async () => {
+    stubFetch({
+      sales: [saleSummary],
+      page: 1,
+      pageSize: 20,
+      totalCount: 1,
+      totalPages: 2,
+    });
+    renderWithProviders(<SalesPage />);
+
+    // Wait for initial load
+    await screen.findByText('رقم الفاتورة');
+
+    const fromInput = screen.getByLabelText('من');
+    const toInput = screen.getByLabelText('إلى');
+    const applyBtn = screen.getByRole('button', { name: 'تطبيق' });
+
+    // Set dates using fireEvent.change (works with React's synthetic events)
+    fireEvent.change(fromInput, { target: { value: '2026-10-01' } });
+    fireEvent.change(toInput, { target: { value: '2026-10-31' } });
+
+    // Click Apply
+    await userEvent.click(applyBtn);
+
+    // Wait for the refetch to complete (data reappears)
+    await screen.findByText('رقم الفاتورة');
+
+    // Check fetch was called with from and to params
+    const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
+    const lastCall = calls[calls.length - 1][0] as string;
+    expect(lastCall).toContain('from=');
+    expect(lastCall).toContain('to=');
+    expect(lastCall).toContain('page=1');
+  });
+
+  it('clears filter and reloads unfiltered list', async () => {
+    stubFetch({
+      sales: [saleSummary],
+      page: 1,
+      pageSize: 20,
+      totalCount: 1,
+      totalPages: 1,
+    });
+    renderWithProviders(<SalesPage />);
+
+    await screen.findByText('رقم الفاتورة');
+
+    const fromInput = screen.getByLabelText('من');
+    const toInput = screen.getByLabelText('إلى');
+    const applyBtn = screen.getByRole('button', { name: 'تطبيق' });
+    const clearBtn = screen.getByRole('button', { name: 'مسح' });
+
+    // Apply a filter
+    fireEvent.change(fromInput, { target: { value: '2026-10-01' } });
+    fireEvent.change(toInput, { target: { value: '2026-10-31' } });
+    await userEvent.click(applyBtn);
+    await screen.findByText('رقم الفاتورة');
+
+    // Clear the filter
+    await userEvent.click(clearBtn);
+
+    // Wait for the refetch to complete
+    await screen.findByText('رقم الفاتورة');
+
+    // Check fetch was called without from/to
+    const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
+    const lastCall = calls[calls.length - 1][0] as string;
+    expect(lastCall).not.toContain('from=');
+    expect(lastCall).not.toContain('to=');
+    expect(lastCall).toContain('page=1');
+  });
+
+  it('pagination after filter still includes from/to params', async () => {
+    // Use renderHook to test useSales directly with different query keys.
+    const { result, rerender } = renderHook(
+      ({ page, from, to }: { page: number; from?: string | undefined; to?: string | undefined }) =>
+        useSales(page, from, to),
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            {children}
+          </QueryClientProvider>
+        ),
+        initialProps: { page: 1, from: undefined as string | undefined, to: undefined as string | undefined },
+      },
+    );
+
+    // Initial unfiltered fetch
+    await waitFor(() => result.current.isSuccess);
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/pos/sales?page=1&pageSize=20',
+      expect.anything(),
+    );
+
+    (fetch as ReturnType<typeof vi.fn>).mockClear();
+
+    // Apply filter: change page to 2 and add from/to
+    rerender({ page: 2, from: '2026-10-01T00:00:00Z' as string | undefined, to: '2026-10-31T23:59:59Z' as string | undefined });
+
+    await waitFor(() => result.current.isSuccess);
+    const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls.length).toBe(1);
+    expect(calls[0][0]).toContain('page=2');
+    expect(calls[0][0]).toContain('from=');
+    expect(calls[0][0]).toContain('to=');
+  });
+
+  it('disables Apply button when from > to', async () => {
+    renderWithProviders(<SalesPage />);
+
+    await screen.findByText('رقم الفاتورة');
+
+    const fromInput = screen.getByLabelText('من');
+    const toInput = screen.getByLabelText('إلى');
+    const applyBtn = screen.getByRole('button', { name: 'تطبيق' });
+
+    // Set inverted range
+    (fromInput as HTMLInputElement).value = '2026-10-31';
+    fromInput.dispatchEvent(new Event('change', { bubbles: true }));
+    (toInput as HTMLInputElement).value = '2026-10-01';
+    toInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(applyBtn).toBeDisabled();
   });
 });

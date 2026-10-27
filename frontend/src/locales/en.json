@@ -33,7 +33,12 @@
     "loadError": "The sales could not be loaded.",
     "pageOf": "Page {{current}} of {{total}}",
     "prevPage": "Previous",
-    "nextPage": "Next"
+    "nextPage": "Next",
+    "filterLabel": "Filter by date",
+    "filterFrom": "From",
+    "filterTo": "To",
+    "filterApply": "Apply",
+    "filterClear": "Clear"
   },
   "receipt": {
     "title": "Receipt",

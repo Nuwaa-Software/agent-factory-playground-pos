@@ -33,7 +33,12 @@
     "loadError": "تعذّر تحميل المبيعات.",
     "pageOf": "صفحة {{current}} من {{total}}",
     "prevPage": "السابقة",
-    "nextPage": "التالية"
+    "nextPage": "التالية",
+    "filterLabel": "تصفية حسب التاريخ",
+    "filterFrom": "من",
+    "filterTo": "إلى",
+    "filterApply": "تطبيق",
+    "filterClear": "مسح"
   },
   "receipt": {
     "title": "الإيصال",

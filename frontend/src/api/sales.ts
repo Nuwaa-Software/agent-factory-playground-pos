@@ -48,10 +48,13 @@ export interface CreateSaleRequest {
   customerId?: string;
 }
 
-export function useSales(page: number = 1) {
+export function useSales(page: number, from?: string, to?: string) {
+  const params = new URLSearchParams({ page: String(page), pageSize: '20' });
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
   return useQuery({
-    queryKey: ['sales', page],
-    queryFn: () => apiGet<SalesListResponse>(`/api/pos/sales?page=${page}&pageSize=20`),
+    queryKey: ['sales', page, from, to],
+    queryFn: () => apiGet<SalesListResponse>(`/api/pos/sales?${params.toString()}`),
   });
 }
 
