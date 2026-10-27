@@ -28,6 +28,9 @@ export default function Layout() {
             <NavLink to="/sales" className={navLink}>
               {t('nav.sales')}
             </NavLink>
+            <NavLink to="/pos" className={navLink}>
+              {t('nav.pos')}
+            </NavLink>
             <NavLink to="/shifts" className={navLink}>
               {t('nav.shifts')}
             </NavLink>

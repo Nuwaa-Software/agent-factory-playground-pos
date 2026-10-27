@@ -22,7 +22,7 @@ export async function apiGet<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** POST a JSON body to an endpoint of the MiniPos API. */
+/** POST a JSON body to the MiniPos API as the signed-in company and role. */
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const session = loadSession();
   const headers: Record<string, string> = {
