@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiGet, apiGetText, apiPost } from './client';
+import { apiGet, apiGetText, apiPatch, apiPost } from './client';
 
 /** `SaleSummary` of the API (backend/src/MiniPos.Api/Features/Sales/ListSales/Request.cs). */
 export interface SaleSummary {
@@ -9,6 +9,10 @@ export interface SaleSummary {
   netHalalas: number;
   vatHalalas: number;
   totalHalalas: number;
+  voided: boolean;
+  voidedAt: string | null;
+  paymentType: number;
+  customerId: string | null;
 }
 
 export interface SalesListResponse {
@@ -75,4 +79,9 @@ export function useReceipt(id: string) {
 /** POST /api/pos/sales — create a new sale. */
 export async function createSale(body: CreateSaleRequest): Promise<SaleResponse> {
   return apiPost<SaleResponse>('/api/pos/sales', body);
+}
+
+/** PATCH /api/pos/sales/{id}/void — void a sale (no body). */
+export async function voidSale(id: string): Promise<SaleResponse> {
+  return apiPatch<SaleResponse>(`/api/pos/sales/${id}/void`, undefined);
 }

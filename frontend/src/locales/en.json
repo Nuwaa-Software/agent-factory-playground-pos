@@ -79,6 +79,16 @@
     "viewReceipt": "View receipt",
     "newSale": "New sale"
   },
+  "report": {
+    "title": "Daily sales report",
+    "dateLabel": "Date",
+    "saleCount": "Sales",
+    "net": "Net",
+    "vat": "VAT",
+    "gross": "Gross",
+    "empty": "No sales on this date.",
+    "loadError": "The report could not be loaded."
+  },
   "shift": {
     "title": "Shift",
     "openTitle": "Open shift",
@@ -103,5 +113,45 @@
     "actual": "Actual cash",
     "errRequired": "This field is required.",
     "errMoney": "Enter a valid amount (e.g. 10.50)."
+  },
+  "void": {
+    "title": "Void",
+    "confirmTitle": "Void this sale?",
+    "saleNumber": "Invoice #",
+    "date": "Date",
+    "total": "Total",
+    "reasonLabel": "Reason (not saved)",
+    "reasonPlaceholder": "Why are you voiding this sale?",
+    "confirm": "Void sale",
+    "voiding": "Voiding…",
+    "success": "Sale voided.",
+    "error": "The sale could not be voided. Try again.",
+    "alreadyVoided": "This sale is already voided.",
+    "windowExpired": "This sale is outside the void window and cannot be voided.",
+    "notFound": "The sale was not found.",
+    "forbidden": "You do not have permission to void sales."
+  },
+  "productCreate": { "title": "New product" },
+  "productEdit": { "title": "Edit product" },
+  "product": {
+    "nameEn": "Name (English)",
+    "nameAr": "Name (Arabic)",
+    "sku": "SKU",
+    "price": "Price (SAR)",
+    "stock": "Stock",
+    "category": "Category",
+    "categoryNone": "No category",
+    "save": "Save",
+    "saving": "Saving…",
+    "created": "Product created.",
+    "updated": "Product updated.",
+    "saveError": "The product could not be saved. Try again.",
+    "newProduct": "New product",
+    "backToList": "Back to list",
+    "readOnlyNote": "Name and SKU cannot be changed.",
+    "errRequired": "This field is required.",
+    "errSku": "Use uppercase letters, numbers and dashes only (e.g. ABC-123).",
+    "errMoney": "Enter a valid amount (e.g. 10.50).",
+    "errStock": "Enter a whole non-negative number."
   }
 }

@@ -31,9 +31,26 @@ public sealed class Sale : ITenantScoped
 
     public DateTimeOffset? VoidedAt { get; set; }
 
+    /// <summary>Reason provided by the operator when voiding the sale.</summary>
+    public string? VoidReason { get; set; }
+
     public PaymentType PaymentType { get; set; } = PaymentType.Cash;
 
     public Guid? CustomerId { get; set; }
+
+    /// <summary>Breakdown of payment methods for this sale.</summary>
+    public List<PaymentBreakdownEntry> PaymentBreakdown { get; init; } = [];
+}
+
+public sealed class PaymentBreakdownEntry
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+
+    public Guid SaleId { get; set; }
+
+    public PaymentType PaymentType { get; set; }
+
+    public long AmountHalalas { get; set; }
 }
 
 public sealed class SaleLine
@@ -57,4 +74,7 @@ public sealed class SaleLine
     public string? DiscountReason { get; set; }
 
     public long LineNetHalalas => Math.Max(0, UnitPriceHalalas * Quantity - DiscountHalalas);
+
+    /// <summary>Quantity already refunded against this line.</summary>
+    public int RefundedQuantity { get; set; }
 }

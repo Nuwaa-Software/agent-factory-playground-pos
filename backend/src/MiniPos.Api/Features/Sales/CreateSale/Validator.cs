@@ -26,6 +26,18 @@ public sealed class CreateSaleValidator : AbstractValidator<CreateSaleCommand>
 
         // Validate that if PaymentType is provided, it's a valid enum value
         RuleFor(x => x.PaymentType).IsInEnum();
+
+        // If payment type is Mixed, breakdown is required
+        RuleFor(x => x.PaymentBreakdown)
+            .NotNull()
+            .When(x => x.PaymentType == PaymentType.Mixed);
+
+        // Validate each breakdown entry (FluentValidation handles null as empty)
+        RuleForEach(x => x.PaymentBreakdown).ChildRules(bd =>
+        {
+            bd.RuleFor(x => x.PaymentType).IsInEnum();
+            bd.RuleFor(x => x.AmountHalalas).GreaterThanOrEqualTo(0);
+        });
     }
 }
 

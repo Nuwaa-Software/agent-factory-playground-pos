@@ -11,6 +11,7 @@ using MiniPos.Api.Features.Reports.DailySales;
 using MiniPos.Api.Features.Reports.SalesAnalytics;
 using MiniPos.Api.Features.Sales.DiscountLimits;
 using MiniPos.Api.Features.Sales.GetReceipt;
+using MiniPos.Api.Features.Sales.RefundSale;
 using MiniPos.Api.Features.Sales.VoidSale;
 using MiniPos.Api.Features.Sales.ListSales;
 using MiniPos.Api.Features.Shifts;
@@ -37,6 +38,7 @@ public static class FeatureEndpoints
         Sales.GetSale.Endpoint.Map(app);
         Sales.GetReceipt.Endpoint.Map(app);
         Sales.VoidSale.Endpoint.Map(app);
+        Sales.RefundSale.Endpoint.Map(app);
         Sales.ListSales.Endpoint.Map(app);
         Sales.DiscountLimits.Endpoint.Map(app);
         Reports.DailySales.Endpoint.Map(app);
