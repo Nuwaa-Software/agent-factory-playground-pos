@@ -2,10 +2,22 @@ import { loadSession } from '../session';
 
 export class ApiError extends Error {
   readonly status: number;
+  readonly code?: string;
 
-  constructor(status: number) {
+  constructor(status: number, code?: string) {
     super(`API request failed with status ${status}`);
     this.status = status;
+    this.code = code;
+  }
+}
+
+/** Extract an error code from a non-OK JSON response, if present. */
+async function parseErrorCode(response: Response): Promise<string | undefined> {
+  try {
+    const json = await response.json();
+    return typeof json?.title === 'string' ? json.title : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -18,7 +30,7 @@ export async function apiGet<T>(path: string): Promise<T> {
     headers['X-Role'] = session.role;
   }
   const response = await fetch(path, { headers });
-  if (!response.ok) throw new ApiError(response.status);
+  if (!response.ok) throw new ApiError(response.status, await parseErrorCode(response));
   return (await response.json()) as T;
 }
 
@@ -31,7 +43,7 @@ export async function apiGetText(path: string): Promise<string> {
     headers['X-Role'] = session.role;
   }
   const response = await fetch(path, { headers });
-  if (!response.ok) throw new ApiError(response.status);
+  if (!response.ok) throw new ApiError(response.status, await parseErrorCode(response));
   return response.text();
 }
 
@@ -47,7 +59,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     headers['X-Role'] = session.role;
   }
   const response = await fetch(path, { method: 'POST', headers, body: JSON.stringify(body) });
-  if (!response.ok) throw new ApiError(response.status);
+  if (!response.ok) throw new ApiError(response.status, await parseErrorCode(response));
   return (await response.json()) as T;
 }
 
@@ -62,7 +74,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     headers['X-Company-Id'] = session.companyId;
     headers['X-Role'] = session.role;
   }
-  const response = await fetch(path, { method: 'PATCH', headers, body: JSON.stringify(body) });
-  if (!response.ok) throw new ApiError(response.status);
+  const response = await fetch(path, { method: 'PATCH', headers, body: body == null ? undefined : JSON.stringify(body) });
+  if (!response.ok) throw new ApiError(response.status, await parseErrorCode(response));
   return (await response.json()) as T;
 }

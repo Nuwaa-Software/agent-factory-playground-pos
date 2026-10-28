@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from '../test/axe';
 import i18n from '../i18n';
-import { renderWithProviders, stubFetch } from '../test/render';
+import { renderWithProviders, stubFetch, signIn } from '../test/render';
 import SalesPage from './SalesPage';
 
 describe('SalesPage', () => {
@@ -13,6 +13,10 @@ describe('SalesPage', () => {
     netHalalas: 1250,
     vatHalalas: 125,
     totalHalalas: 1375,
+    voided: false,
+    voidedAt: null,
+    paymentType: 1,
+    customerId: null,
   };
 
   const salesListResponse = {
@@ -183,5 +187,195 @@ describe('SalesPage', () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+});
+
+describe('VoidSaleDialog', () => {
+  const saleSummary = {
+    id: 'sale-1',
+    number: 123,
+    createdAt: '2026-10-14T10:30:00Z',
+    netHalalas: 1250,
+    vatHalalas: 125,
+    totalHalalas: 1375,
+    voided: false,
+    voidedAt: null,
+    paymentType: 1,
+    customerId: null,
+  };
+
+  const salesListResponse = {
+    sales: [saleSummary],
+    page: 1,
+    pageSize: 20,
+    totalCount: 1,
+    totalPages: 1,
+  };
+
+  function stubUrlAwareFetch(
+    onVoid: (url: string) => Response | Promise<Response>
+  ) {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      void init;
+      if (url.includes('/api/pos/sales?page=')) {
+        return new Response(JSON.stringify(salesListResponse), { status: 200 });
+      }
+      return onVoid(url);
+    });
+    Object.defineProperty(globalThis, 'fetch', {
+      value: fetchMock,
+      writable: true,
+      configurable: true,
+    });
+    return fetchMock;
+  }
+
+  it('voids a sale successfully (PATCH with no body)', async () => {
+    signIn('Admin');
+    const voidResponse = {
+      id: 'sale-1',
+      number: 123,
+      createdAt: '2026-10-14T10:30:00Z',
+      lines: [],
+      netHalalas: 1250,
+      vatHalalas: 125,
+      totalHalalas: 1375,
+      qrCode: '',
+      voided: true,
+      voidedAt: '2026-10-14T11:00:00Z',
+      paymentType: 1,
+      customerId: null,
+    };
+
+    const mock = vi.fn(async (url: string, init?: RequestInit) => {
+      void init;
+      if (url.includes('/api/pos/sales?page=')) {
+        return new Response(JSON.stringify(salesListResponse), { status: 200 });
+      }
+      if (url.includes('/api/pos/sales/sale-1/void')) {
+        return new Response(JSON.stringify(voidResponse), { status: 200 });
+      }
+      return new Response('', { status: 404 });
+    });
+
+    vi.stubGlobal('fetch', mock);
+
+    renderWithProviders(<SalesPage />);
+    await screen.findByText('رقم الفاتورة');
+
+    // Open the void dialog
+    const voidButton = screen.getByRole('button', { name: 'إلغاء' });
+    await userEvent.click(voidButton);
+
+    // Dialog should be open
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // Type a reason (should NOT be sent to the API)
+    await userEvent.type(screen.getByLabelText(/السبب/), 'Customer complaint');
+
+    // Confirm
+    const confirmBtn = screen.getByRole('button', { name: 'إلغاء العملية' });
+    await userEvent.click(confirmBtn);
+
+    // Wait for success message
+    await screen.findByText('تم إلغاء العملية.');
+
+    // Assert the fetch was called with PATCH and no body
+    const voidCall = mock.mock.calls.find(
+      (c) => c[0]?.includes('/api/pos/sales/sale-1/void')
+    );
+    expect(voidCall).toBeDefined();
+    expect(voidCall![1]?.method).toBe('PATCH');
+    // body should be undefined (no body sent)
+    expect(voidCall![1]?.body).toBeUndefined();
+
+    // Reason value should not appear in any fetch call's body
+    for (const call of mock.mock.calls) {
+      const body = call[1]?.body;
+      if (typeof body === 'string') expect(body).not.toContain('Customer complaint');
+    }
+
+    // Dialog should be closed
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows void.forbidden on 403', async () => {
+    signIn('Cashier');
+
+    stubUrlAwareFetch(async (url: string) => {
+      if (url.includes('/api/pos/sales/sale-1/void')) {
+        return new Response('', { status: 403 });
+      }
+      return new Response('', { status: 404 });
+    });
+
+    renderWithProviders(<SalesPage />);
+    await screen.findByText('رقم الفاتورة');
+
+    const voidButton = screen.getByRole('button', { name: 'إلغاء' });
+    await userEvent.click(voidButton);
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'إلغاء العملية' }));
+
+    // Error message should be shown in role="alert"
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('ليس لديك صلاحية إلغاء العمليات.');
+
+    // Dialog should still be open
+    expect(screen.queryByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('shows void.notFound on 404', async () => {
+    signIn('Admin');
+
+    stubUrlAwareFetch(async (url: string) => {
+      if (url.includes('/api/pos/sales/sale-1/void')) {
+        return new Response(JSON.stringify({ title: 'sale.not_found' }), { status: 404 });
+      }
+      return new Response('', { status: 404 });
+    });
+
+    renderWithProviders(<SalesPage />);
+    await screen.findByText('رقم الفاتورة');
+
+    const voidButton = screen.getByRole('button', { name: 'إلغاء' });
+    await userEvent.click(voidButton);
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'إلغاء العملية' }));
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('لم يتم العثور على العملية.');
+
+    expect(screen.queryByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('shows void.windowExpired on sale.void_window_expired code', async () => {
+    signIn('Admin');
+
+    stubUrlAwareFetch(async (url: string) => {
+      if (url.includes('/api/pos/sales/sale-1/void')) {
+        return new Response(JSON.stringify({ title: 'sale.void_window_expired' }), { status: 400 });
+      }
+      return new Response('', { status: 404 });
+    });
+
+    renderWithProviders(<SalesPage />);
+    await screen.findByText('رقم الفاتورة');
+
+    const voidButton = screen.getByRole('button', { name: 'إلغاء' });
+    await userEvent.click(voidButton);
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'إلغاء العملية' }));
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('هذه العملية خارج نافذة الإلغاء ولا يمكن إلغاؤها.');
+
+    expect(screen.queryByRole('dialog')).toBeInTheDocument();
   });
 });
