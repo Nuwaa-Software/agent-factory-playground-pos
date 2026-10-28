@@ -9,7 +9,8 @@ public sealed record CreateSaleCommand(
     IReadOnlyList<CreateSaleLine> Lines,
     PaymentType? PaymentType = null,
     Guid? CustomerId = null,
-    SaleDiscountRequest? SaleDiscount = null) : IRequest<Result<SaleResponse>>;
+    SaleDiscountRequest? SaleDiscount = null,
+    IReadOnlyList<PaymentBreakdownRequest>? PaymentBreakdown = null) : IRequest<Result<SaleResponse>>;
 
 public sealed record CreateSaleLine(
     Guid ProductId,
@@ -25,3 +26,7 @@ public sealed record SaleDiscountRequest(
     DiscountType Type,
     long Value,
     string Reason);
+
+public sealed record PaymentBreakdownRequest(
+    PaymentType PaymentType,
+    long AmountHalalas);
