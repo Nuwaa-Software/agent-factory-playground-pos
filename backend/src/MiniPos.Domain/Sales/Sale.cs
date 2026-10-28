@@ -71,4 +71,7 @@ public sealed class SaleLine
     public string? DiscountReason { get; set; }
 
     public long LineNetHalalas => Math.Max(0, UnitPriceHalalas * Quantity - DiscountHalalas);
+
+    /// <summary>Quantity already refunded against this line.</summary>
+    public int RefundedQuantity { get; set; }
 }

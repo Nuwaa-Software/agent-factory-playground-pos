@@ -29,6 +29,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
     public DbSet<User> Users => Set<User>();
 
+    public DbSet<Refund> Refunds => Set<Refund>();
+
     /// <summary>Read by the global query filters below, per DbContext instance (i.e. per request).</summary>
     public Guid CurrentCompanyId => tenant.CompanyId;
 
@@ -105,6 +107,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             b.Property(u => u.NameEn).HasMaxLength(200);
             b.Property(u => u.NameAr).HasMaxLength(200);
             b.HasIndex(u => u.CompanyId);
+        });
+
+        modelBuilder.Entity<Refund>(b =>
+        {
+            b.Property(r => r.Reason).HasMaxLength(1024);
+            b.Property(r => r.RefundedBy).HasMaxLength(100);
         });
 
         // Multi-tenancy, read side: every ITenantScoped entity only ever returns the current company's rows.
