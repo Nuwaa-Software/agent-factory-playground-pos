@@ -1,4 +1,5 @@
 using MediatR;
+using MiniPos.Api.Features.Sales.GetSale;
 using MiniPos.Domain.Sales;
 
 namespace MiniPos.Api.Features.Sales.ListSales;
@@ -36,5 +37,5 @@ public sealed record SaleSummary(
     Guid? CustomerId,
     bool Voided,
     DateTimeOffset? VoidedAt,
-    PaymentType PaymentType
-);
+    PaymentType PaymentType,
+    IReadOnlyList<PaymentBreakdownResponse> PaymentBreakdown);

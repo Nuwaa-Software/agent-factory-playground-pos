@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using MiniPos.Api.Features.Sales.GetSale;
 using MiniPos.Infrastructure.Persistence;
 
 namespace MiniPos.Api.Features.Sales.ListSales;
@@ -74,7 +75,11 @@ public sealed class ListSalesHandler(AppDbContext db, TimeProvider clock) : IReq
             .OrderByDescending(s => s.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(s => new SaleSummary(
+            .Include(s => s.PaymentBreakdown)
+            .ToListAsync(cancellationToken);
+
+        return new ListSalesResponse(
+            Sales: sales.Select(s => new SaleSummary(
                 Id: s.Id,
                 Number: s.Number,
                 CreatedAt: s.CreatedAt,
@@ -84,12 +89,10 @@ public sealed class ListSalesHandler(AppDbContext db, TimeProvider clock) : IReq
                 CustomerId: s.CustomerId,
                 Voided: s.Voided,
                 VoidedAt: s.VoidedAt,
-                PaymentType: s.PaymentType
-            ))
-            .ToListAsync(cancellationToken);
-        
-        return new ListSalesResponse(
-            Sales: sales,
+                PaymentType: s.PaymentType,
+                PaymentBreakdown: s.PaymentBreakdown.Select(e => new PaymentBreakdownResponse(
+                    e.PaymentType, e.AmountHalalas)).ToList()
+            )).ToList(),
             Page: page,
             PageSize: pageSize,
             TotalCount: totalCount,
