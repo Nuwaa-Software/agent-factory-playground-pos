@@ -9,7 +9,12 @@ import VoidSaleDialog from '../components/VoidSaleDialog';
 export default function SalesPage() {
   const { t, i18n } = useTranslation();
   const [page, setPage] = useState(1);
-  const sales = useSales(page);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [appliedFrom, setAppliedFrom] = useState<string | undefined>();
+  const [appliedTo, setAppliedTo] = useState<string | undefined>();
+  const sales = useSales(page, appliedFrom, appliedTo);
+
   const queryClient = useQueryClient();
 
   const [voidingSale, setVoidingSale] = useState<{
@@ -20,6 +25,24 @@ export default function SalesPage() {
   } | null>(null);
   const [triggerElement, setTriggerElement] = useState<HTMLElement | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleApply = () => {
+    if (!from || !to) return;
+    // Guard: disable Apply when from > to (handled by button disabled state)
+    setAppliedFrom(`${from}T00:00:00Z`);
+    setAppliedTo(`${to}T23:59:59Z`);
+    setPage(1);
+  };
+
+  const handleClear = () => {
+    setAppliedFrom(undefined);
+    setAppliedTo(undefined);
+    setFrom('');
+    setTo('');
+    setPage(1);
+  };
+
+  const isRangeInvalid = Boolean(from && to && from > to);
 
   const handlePrevious = () => {
     if (page > 1) setPage(page - 1);
@@ -40,6 +63,49 @@ export default function SalesPage() {
       <h1 id="sales-title" className="mb-4 text-xl font-semibold">
         {t('sales.title')}
       </h1>
+      <div
+        role="group"
+        aria-label={t('sales.filterLabel')}
+        className="mb-4 flex flex-wrap items-end gap-3"
+      >
+        <label htmlFor="filter-from" className="flex flex-col text-start">
+          <span className="mb-1 text-sm font-medium">{t('sales.filterFrom')}</span>
+          <input
+            id="filter-from"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            dir="ltr"
+            className="min-h-11 rounded-md border border-slate-300 px-3 text-sm"
+          />
+        </label>
+        <label htmlFor="filter-to" className="flex flex-col text-start">
+          <span className="mb-1 text-sm font-medium">{t('sales.filterTo')}</span>
+          <input
+            id="filter-to"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            dir="ltr"
+            className="min-h-11 rounded-md border border-slate-300 px-3 text-sm"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={handleApply}
+          disabled={!from || !to || isRangeInvalid}
+          className="min-h-11 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {t('sales.filterApply')}
+        </button>
+        <button
+          type="button"
+          onClick={handleClear}
+          className="min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+        >
+          {t('sales.filterClear')}
+        </button>
+      </div>
       {sales.isPending ? (
         <p role="status">{t('common.loading')}</p>
       ) : sales.isError ? (
