@@ -19,6 +19,10 @@ public sealed record SaleLineResponse(
     long DiscountHalalas,
     string? DiscountReason);
 
+public sealed record PaymentBreakdownResponse(
+    PaymentType PaymentType,
+    long AmountHalalas);
+
 public sealed record RefundResponse(
     Guid Id,
     Guid SaleId,
@@ -42,6 +46,7 @@ public sealed record SaleResponse(
     Guid? CustomerId,
     long SaleDiscountHalalas,
     string? SaleDiscountReason,
+    IReadOnlyList<PaymentBreakdownResponse> PaymentBreakdown,
     IReadOnlyList<RefundResponse> Refunds)
 {
     /// <summary>The QR seller name is the company's Arabic name, as on the printed simplified invoice.</summary>
@@ -57,7 +62,10 @@ public sealed record SaleResponse(
             sale.NetHalalas, sale.VatHalalas, sale.TotalHalalas,
             InvoiceQr.Encode(company.NameAr, company.VatNumber, sale.CreatedAt, sale.TotalHalalas, sale.VatHalalas),
             sale.Voided, sale.VoidedAt, sale.PaymentType, sale.CustomerId,
-            sale.SaleDiscountHalalas, sale.SaleDiscountReason, []);
+            sale.SaleDiscountHalalas, sale.SaleDiscountReason,
+            [.. sale.PaymentBreakdown.Select(e => new PaymentBreakdownResponse(
+                e.PaymentType, e.AmountHalalas))],
+            []);
     }
 
     public static SaleResponse From(Sale sale, MiniPos.Domain.Companies.Company company, IReadOnlyList<Refund> refunds)
@@ -73,6 +81,8 @@ public sealed record SaleResponse(
             InvoiceQr.Encode(company.NameAr, company.VatNumber, sale.CreatedAt, sale.TotalHalalas, sale.VatHalalas),
             sale.Voided, sale.VoidedAt, sale.PaymentType, sale.CustomerId,
             sale.SaleDiscountHalalas, sale.SaleDiscountReason,
+            [.. sale.PaymentBreakdown.Select(e => new PaymentBreakdownResponse(
+                e.PaymentType, e.AmountHalalas))],
             [.. refunds.Select(r => new RefundResponse(
                 r.Id, r.SaleId, r.TotalHalalas, r.Reason, r.CreatedAt, r.RefundedBy))]);
     }

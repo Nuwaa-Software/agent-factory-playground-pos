@@ -98,6 +98,59 @@ public sealed partial class CreateSaleHandler(AppDbContext db, ITenantContext te
         sale.VatHalalas = Vat.Compute(sale.NetHalalas, taxRate);
         sale.TotalHalalas = sale.NetHalalas + sale.VatHalalas;
 
+        // Handle payment breakdown
+        if (sale.PaymentType == PaymentType.Mixed)
+        {
+            // Breakdown is required for Mixed (validated above), but guard again
+            var breakdown = request.PaymentBreakdown ?? [];
+            if (breakdown.Count == 0)
+            {
+                return new Error("sale.breakdown_required", "paymentBreakdown is required when paymentType is Mixed.", ErrorKind.Validation);
+            }
+            var sum = breakdown.Sum(e => e.AmountHalalas);
+            if (sum != sale.TotalHalalas)
+            {
+                return new Error("sale.breakdown_sum_mismatch", $"paymentBreakdown must sum to the sale total ({sale.TotalHalalas} halalas), but got {sum}.", ErrorKind.Validation);
+            }
+            foreach (var entry in breakdown)
+            {
+                sale.PaymentBreakdown.Add(new PaymentBreakdownEntry
+                {
+                    SaleId = sale.Id,
+                    PaymentType = entry.PaymentType,
+                    AmountHalalas = entry.AmountHalalas,
+                });
+            }
+        }
+        else if (request.PaymentBreakdown is not null)
+        {
+            // Non-mixed with breakdown: validate sum
+            var sum = request.PaymentBreakdown.Sum(e => e.AmountHalalas);
+            if (sum != sale.TotalHalalas)
+            {
+                return new Error("sale.breakdown_sum_mismatch", $"paymentBreakdown must sum to the sale total ({sale.TotalHalalas} halalas), but got {sum}.", ErrorKind.Validation);
+            }
+            foreach (var entry in request.PaymentBreakdown)
+            {
+                sale.PaymentBreakdown.Add(new PaymentBreakdownEntry
+                {
+                    SaleId = sale.Id,
+                    PaymentType = entry.PaymentType,
+                    AmountHalalas = entry.AmountHalalas,
+                });
+            }
+        }
+        else
+        {
+            // Non-mixed without breakdown: default to single entry
+            sale.PaymentBreakdown.Add(new PaymentBreakdownEntry
+            {
+                SaleId = sale.Id,
+                PaymentType = sale.PaymentType,
+                AmountHalalas = sale.TotalHalalas,
+            });
+        }
+
         // Update customer credit balance for credit sales
         if (sale.PaymentType == PaymentType.Credit && request.CustomerId is not null)
         {

@@ -34,6 +34,20 @@ public sealed class Sale : ITenantScoped
     public PaymentType PaymentType { get; set; } = PaymentType.Cash;
 
     public Guid? CustomerId { get; set; }
+
+    /// <summary>Breakdown of payment methods for this sale.</summary>
+    public List<PaymentBreakdownEntry> PaymentBreakdown { get; init; } = [];
+}
+
+public sealed class PaymentBreakdownEntry
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+
+    public Guid SaleId { get; set; }
+
+    public PaymentType PaymentType { get; set; }
+
+    public long AmountHalalas { get; set; }
 }
 
 public sealed class SaleLine
