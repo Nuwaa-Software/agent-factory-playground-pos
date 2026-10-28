@@ -81,6 +81,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
                 e.Property(x => x.PaymentType).HasConversion<long>();
                 e.Property(x => x.AmountHalalas);
             });
+            b.Property(s => s.VoidReason).HasMaxLength(500);
         });
 
         modelBuilder.Entity<Shift>(b =>
