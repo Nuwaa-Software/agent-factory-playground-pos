@@ -27,6 +27,8 @@ public class CompanySettingsTests(PostgresFixture db) : ApiTestBase(db)
         settings!.TaxRatePercent.Should().Be(15.0m);
         settings.ReceiptFooterText.Should().BeEmpty();
         settings.LowStockThreshold.Should().Be(10);
+        settings.CompanyName.Should().BeEmpty();
+        settings.VatRegistrationNumber.Should().BeEmpty();
     }
 
     [Fact]
@@ -63,6 +65,8 @@ public class CompanySettingsTests(PostgresFixture db) : ApiTestBase(db)
         settings!.TaxRatePercent.Should().Be(12.5m);
         settings.ReceiptFooterText.Should().BeEmpty();
         settings.LowStockThreshold.Should().Be(10);
+        settings.CompanyName.Should().BeEmpty();
+        settings.VatRegistrationNumber.Should().BeEmpty();
     }
 
     [Fact]
@@ -72,13 +76,15 @@ public class CompanySettingsTests(PostgresFixture db) : ApiTestBase(db)
         var client = Factory.ClientFor(company);
 
         var response = await client.PatchAsJsonAsync("/api/company/settings",
-            new UpdateSettingsCommand(TaxRatePercent: 20.0m, ReceiptFooterText: "Thank you!", LowStockThreshold: 5));
+            new UpdateSettingsCommand(TaxRatePercent: 20.0m, ReceiptFooterText: "Thank you!", LowStockThreshold: 5, CompanyName: "Test Co", VatRegistrationNumber: "VAT-123"));
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
         settings!.TaxRatePercent.Should().Be(20.0m);
         settings.ReceiptFooterText.Should().Be("Thank you!");
         settings.LowStockThreshold.Should().Be(5);
+        settings.CompanyName.Should().Be("Test Co");
+        settings.VatRegistrationNumber.Should().Be("VAT-123");
     }
 
     [Fact]
@@ -390,5 +396,218 @@ public class CompanySettingsTests(PostgresFixture db) : ApiTestBase(db)
         lowStockB.Should().NotBeNull();
         lowStockB.Should().HaveCount(1);
         lowStockB![0].Id.Should().Be(prodB.Id);
+    }
+
+    // ---- CompanyName and VatRegistrationNumber defaults ----
+
+    [Fact]
+    public async Task Get_returns_empty_defaults_for_company_name_and_vat_number()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var response = await client.GetAsync("/api/company/settings");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
+        settings.Should().NotBeNull();
+        settings!.CompanyName.Should().BeEmpty();
+        settings.VatRegistrationNumber.Should().BeEmpty();
+    }
+
+    // ---- PATCH set companyName ----
+
+    [Fact]
+    public async Task Patch_set_company_name_returns_200_and_read_back()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(CompanyName: "My Company"));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
+        settings!.CompanyName.Should().Be("My Company");
+    }
+
+    [Fact]
+    public async Task Patch_set_company_name_persists_and_returned_on_get()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(CompanyName: "Persisted Co"));
+
+        var response = await client.GetAsync("/api/company/settings");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
+        settings!.CompanyName.Should().Be("Persisted Co");
+    }
+
+    // ---- PATCH set vatRegistrationNumber ----
+
+    [Fact]
+    public async Task Patch_set_vat_registration_number_returns_200_and_read_back()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(VatRegistrationNumber: "310122393500003"));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
+        settings!.VatRegistrationNumber.Should().Be("310122393500003");
+    }
+
+    [Fact]
+    public async Task Patch_set_vat_registration_number_persists_and_returned_on_get()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(VatRegistrationNumber: "VAT-12345"));
+
+        var response = await client.GetAsync("/api/company/settings");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
+        settings!.VatRegistrationNumber.Should().Be("VAT-12345");
+    }
+
+    // ---- Partial update leaves others unchanged ----
+
+    [Fact]
+    public async Task Patch_omitting_company_name_and_vat_number_leaves_them_unchanged()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Set both fields first
+        await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(CompanyName: "Old Name", VatRegistrationNumber: "OLD-VAT"));
+
+        // Now PATCH only tax rate — omitting both new fields
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(TaxRatePercent: 20.0m));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
+        settings!.CompanyName.Should().Be("Old Name");
+        settings.VatRegistrationNumber.Should().Be("OLD-VAT");
+    }
+
+    // ---- Validation: > 500 chars ----
+
+    [Fact]
+    public async Task Patch_company_name_over_500_chars_returns_400()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var longName = new string('A', 501);
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(CompanyName: longName));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Patch_vat_registration_number_over_500_chars_returns_400()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var longVat = new string('A', 501);
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(VatRegistrationNumber: longVat));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // ---- Validation: exactly 500 chars ----
+
+    [Fact]
+    public async Task Patch_company_name_exactly_500_chars_succeeds()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var name = new string('A', 500);
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(CompanyName: name));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
+        settings!.CompanyName.Should().HaveLength(500);
+    }
+
+    [Fact]
+    public async Task Patch_vat_registration_number_exactly_500_chars_succeeds()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var vat = new string('A', 500);
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(VatRegistrationNumber: vat));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var settings = await response.Content.ReadFromJsonAsync<CompanySettingsResponse>();
+        settings!.VatRegistrationNumber.Should().HaveLength(500);
+    }
+
+    // ---- Validation: control characters ----
+
+    [Fact]
+    public async Task Patch_company_name_with_control_char_returns_400()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var nameWithControl = "Valid\u0000Name";
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(CompanyName: nameWithControl));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Patch_vat_registration_number_with_control_char_returns_400()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        var vatWithControl = "VAT\u0001-123";
+        var response = await client.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(VatRegistrationNumber: vatWithControl));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // ---- Cross-tenant isolation for company name and VAT number ----
+
+    [Fact]
+    public async Task Cross_tenant_isolation_company_name_and_vat_number()
+    {
+        var companyA = await Factory.CreateCompanyAsync("A", "أ");
+        var companyB = await Factory.CreateCompanyAsync("B", "ب");
+
+        var clientA = Factory.ClientFor(companyA);
+        var clientB = Factory.ClientFor(companyB);
+
+        // Company A sets both fields
+        await clientA.PatchAsJsonAsync("/api/company/settings",
+            new UpdateSettingsCommand(CompanyName: "Company A Name", VatRegistrationNumber: "VAT-A"));
+
+        // Company B should still see empty defaults
+        var settingsB = await clientB.GetFromJsonAsync<CompanySettingsResponse>("/api/company/settings");
+        settingsB!.CompanyName.Should().BeEmpty();
+        settingsB.VatRegistrationNumber.Should().BeEmpty();
+
+        // Company A should see its own values
+        var settingsA = await clientA.GetFromJsonAsync<CompanySettingsResponse>("/api/company/settings");
+        settingsA!.CompanyName.Should().Be("Company A Name");
+        settingsA.VatRegistrationNumber.Should().Be("VAT-A");
     }
 }

@@ -23,6 +23,18 @@ public sealed class UpdateSettingsValidator : AbstractValidator<UpdateSettingsCo
             .WithMessage("'ReceiptFooterText' must not contain bidi control characters.")
             .When(x => x.ReceiptFooterText is not null);
 
+        RuleFor(x => x.CompanyName)
+            .MaximumLength(500)
+            .NoControlCharacters()
+            .NoBidiControls()
+            .When(x => x.CompanyName is not null);
+
+        RuleFor(x => x.VatRegistrationNumber)
+            .MaximumLength(500)
+            .NoControlCharacters()
+            .NoBidiControls()
+            .When(x => x.VatRegistrationNumber is not null);
+
         static bool HasBidiControls(string value)
         {
             foreach (char c in value)
