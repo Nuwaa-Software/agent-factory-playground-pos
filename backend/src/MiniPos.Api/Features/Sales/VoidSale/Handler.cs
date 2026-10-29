@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using MiniPos.Domain.Audit;
 using MiniPos.Domain.Common;
 using MiniPos.Domain.Sales;
 using MiniPos.Domain.Companies;
@@ -27,7 +28,7 @@ public sealed class VoidSaleHandler(AppDbContext db, ITenantContext tenant, Time
             return new Error("sale.not_found", "Sale not found.", ErrorKind.NotFound);
         }
 
-        // Idempotency guard: if already voided, return immediately without modification
+        // Idempotency guard: if already voided, return immediately without modification — no audit entry
         if (sale.Voided)
         {
             var companyResponse = await db.Companies.FirstAsync(c => c.Id == sale.CompanyId, cancellationToken);
@@ -45,6 +46,18 @@ public sealed class VoidSaleHandler(AppDbContext db, ITenantContext tenant, Time
         sale.Voided = true;
         sale.VoidedAt = clock.GetUtcNow();
         sale.VoidReason = request.Reason;
+
+        // Write audit entry for the real void path only (not idempotent early-return)
+        db.AuditLogs.Add(new AuditLog
+        {
+            CompanyId = sale.CompanyId,
+            Action = "sale_voided",
+            EntityName = "Sale",
+            EntityId = sale.Id,
+            ActorName = request.Actor ?? "system",
+            Details = System.Text.Json.JsonSerializer.Serialize(new { reason = request.Reason }),
+            CreatedAt = clock.GetUtcNow(),
+        });
 
         await db.SaveChangesAsync(cancellationToken);
 
