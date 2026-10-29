@@ -9,6 +9,7 @@ export interface Product {
   sku: string;
   priceHalalas: number;
   stock: number;
+  categoryId?: string | null;
 }
 
 export function useProducts() {
