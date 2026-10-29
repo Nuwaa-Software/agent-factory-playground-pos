@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using MiniPos.Api.Features.Audit.ListAuditLog;
 using MiniPos.Api.Features.Sales.GetSale;
 using MiniPos.Domain.Common;
 using MiniPos.Domain.Companies;
@@ -154,6 +155,18 @@ public sealed class RefundSaleHandler(
         }
 
         db.Refunds.Add(refund);
+
+        // Write audit entry for the refund
+        db.AuditLogs.Add(new MiniPos.Domain.Audit.AuditLog
+        {
+            CompanyId = sale.CompanyId,
+            Action = "sale_refunded",
+            EntityName = "Sale",
+            EntityId = sale.Id,
+            ActorName = refundedBy,
+            Details = System.Text.Json.JsonSerializer.Serialize(new { refundId = refund.Id, totalHalalas = refundTotalHalalas }),
+            CreatedAt = clock.GetUtcNow(),
+        });
 
         try
         {
