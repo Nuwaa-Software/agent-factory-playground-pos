@@ -12,6 +12,7 @@ import ProductEditPage from './pages/ProductEditPage';
 import ReportsDailyPage from './pages/ReportsDailyPage';
 import SettingsPage from './pages/SettingsPage';
 import LowStockPage from './pages/LowStockPage';
+import CategoriesPage from './pages/CategoriesPage';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="reports/daily" element={<ReportsDailyPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="low-stock" element={<LowStockPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/products" replace />} />
       </Route>

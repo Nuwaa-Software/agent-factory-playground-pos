@@ -143,6 +143,15 @@
     "empty": "No products below the threshold.",
     "loadError": "The low-stock list could not be loaded."
   },
+  "categories": {
+    "title": "Categories",
+    "name": "Name",
+    "description": "Description",
+    "parent": "Parent category",
+    "noParent": "— none —",
+    "empty": "No categories yet.",
+    "loadError": "The categories could not be loaded."
+  },
   "productCreate": { "title": "New product" },
   "productEdit": { "title": "Edit product" },
   "product": {
