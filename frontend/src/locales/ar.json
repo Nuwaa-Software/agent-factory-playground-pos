@@ -133,6 +133,18 @@
   },
   "productCreate": { "title": "منتج جديد" },
   "productEdit": { "title": "تعديل المنتج" },
+  "lowstock": {
+    "title": "مخزون منخفض",
+    "thresholdLabel": "الحد",
+    "thresholdPlaceholder": "مثال: 10",
+    "apply": "تطبيق",
+    "product": "المنتج",
+    "sku": "رمز المنتج",
+    "stock": "المخزون",
+    "price": "السعر",
+    "empty": "لا توجد منتجات أقل من الحد.",
+    "loadError": "تعذّر تحميل قائمة المخزون المنخفض."
+  },
   "product": {
     "nameEn": "الاسم (إنجليزي)",
     "nameAr": "الاسم (عربي)",

@@ -131,6 +131,18 @@
     "notFound": "The sale was not found.",
     "forbidden": "You do not have permission to void sales."
   },
+  "lowstock": {
+    "title": "Low stock",
+    "thresholdLabel": "Threshold",
+    "thresholdPlaceholder": "e.g. 10",
+    "apply": "Apply",
+    "product": "Product",
+    "sku": "SKU",
+    "stock": "Stock",
+    "price": "Price",
+    "empty": "No products below the threshold.",
+    "loadError": "The low-stock list could not be loaded."
+  },
   "productCreate": { "title": "New product" },
   "productEdit": { "title": "Edit product" },
   "product": {
