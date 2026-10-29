@@ -1,3 +1,4 @@
+using MiniPos.Api.Features.Audit.ListAuditLog;
 using MiniPos.Api.Features.Catalog.DeleteCategory;
 using MiniPos.Api.Features.Catalog.LowStockProducts;
 using MiniPos.Api.Features.Company.GetSettings;
@@ -26,6 +27,7 @@ public static class FeatureEndpoints
 {
     public static void MapFeatures(this IEndpointRouteBuilder app)
     {
+        Audit.ListAuditLog.Endpoint.Map(app);
         Catalog.CreateProduct.Endpoint.Map(app);
         Catalog.ListProducts.Endpoint.Map(app);
         Catalog.UpdateProduct.Endpoint.Map(app);

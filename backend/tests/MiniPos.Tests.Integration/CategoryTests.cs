@@ -211,7 +211,7 @@ public class CategoryTests(PostgresFixture db) : ApiTestBase(db)
         
         // Update the product to assign it to a category
         var updateProductResponse = await client.PatchAsJsonAsync($"/api/inventory/products/{product!.Id}",
-            new UpdateProductCommand(product.Id, null, null, category1!.Id));
+            new UpdateProductCommand(product.Id, null, null, category1!.Id, "Admin"));
             
         updateProductResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var updatedProduct = await updateProductResponse.Content.ReadFromJsonAsync<ProductResponse>();
@@ -220,7 +220,7 @@ public class CategoryTests(PostgresFixture db) : ApiTestBase(db)
         
         // Update again to change to another category
         var updateProductResponse2 = await client.PatchAsJsonAsync($"/api/inventory/products/{product.Id}",
-            new UpdateProductCommand(product.Id, null, null, category2!.Id));
+            new UpdateProductCommand(product.Id, null, null, category2!.Id, "Admin"));
             
         updateProductResponse2.StatusCode.Should().Be(HttpStatusCode.OK);
         var updatedProduct2 = await updateProductResponse2.Content.ReadFromJsonAsync<ProductResponse>();

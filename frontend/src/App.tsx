@@ -8,8 +8,10 @@ import SalesPage from './pages/SalesPage';
 import ShiftsPage from './pages/ShiftsPage';
 import SignInPage from './pages/SignInPage';
 import ProductCreatePage from './pages/ProductCreatePage';
+import ProductEditPage from './pages/ProductEditPage';
 import ReportsDailyPage from './pages/ReportsDailyPage';
 import SettingsPage from './pages/SettingsPage';
+import LowStockPage from './pages/LowStockPage';
 
 export default function App() {
   return (
@@ -23,8 +25,10 @@ export default function App() {
           <Route path="pos" element={<PosPage />} />
           <Route path="shifts" element={<ShiftsPage />} />
           <Route path="products/new" element={<ProductCreatePage />} />
+          <Route path="products/:id/edit" element={<ProductEditPage />} />
           <Route path="reports/daily" element={<ReportsDailyPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="low-stock" element={<LowStockPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/products" replace />} />
       </Route>

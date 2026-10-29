@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using MiniPos.Domain.Audit;
 using MiniPos.Domain.Catalog;
 using MiniPos.Domain.Common;
 using MiniPos.Domain.Companies;
@@ -30,6 +31,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<User> Users => Set<User>();
 
     public DbSet<Refund> Refunds => Set<Refund>();
+
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     /// <summary>Read by the global query filters below, per DbContext instance (i.e. per request).</summary>
     public Guid CurrentCompanyId => tenant.CompanyId;
@@ -114,6 +117,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         {
             b.Property(r => r.Reason).HasMaxLength(1024);
             b.Property(r => r.RefundedBy).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<AuditLog>(b =>
+        {
+            b.Property(a => a.Action).HasMaxLength(64);
+            b.Property(a => a.EntityName).HasMaxLength(64);
+            b.Property(a => a.ActorName).HasMaxLength(100);
+            b.Property(a => a.Details).HasMaxLength(2048);
+            b.HasIndex(a => new { a.CompanyId, a.CreatedAt });
         });
 
         // Multi-tenancy, read side: every ITenantScoped entity only ever returns the current company's rows.

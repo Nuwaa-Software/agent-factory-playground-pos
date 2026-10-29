@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MiniPos.Api.Features.Shifts;
 using MiniPos.Domain.Common;
+using MiniPos.Domain.Sales;
 using MiniPos.Domain.Shifts;
 using MiniPos.Infrastructure.Persistence;
 
@@ -26,7 +27,20 @@ public sealed class CloseShiftHandler(AppDbContext db, TimeProvider clock) : IRe
 
         shift.ClosedAt = clock.GetUtcNow();
         shift.ActualCashHalalas = command.ActualCashHalalas;
-        
+
+        // Compute expected cash from cash sales in the shift window.
+        // TotalHalalas already reflects discounts and VAT, so we use it directly.
+        var salesInWindow = await db.Sales
+            .Where(s => s.CreatedAt >= shift.OpenedAt && s.CreatedAt <= shift.ClosedAt.Value
+                        && s.PaymentType == PaymentType.Cash)
+            .ToListAsync(cancellationToken);
+
+        var nonVoidedCashTotal = salesInWindow.Where(s => !s.Voided).Sum(s => (long?)s.TotalHalalas) ?? 0;
+        var voidedCashTotal = salesInWindow.Where(s => s.Voided).Sum(s => (long?)s.TotalHalalas) ?? 0;
+
+        shift.ExpectedCashHalalas = shift.StartingCashHalalas + nonVoidedCashTotal - voidedCashTotal;
+        shift.DiscrepancyHalalas = command.ActualCashHalalas - shift.ExpectedCashHalalas;
+
         await db.SaveChangesAsync(cancellationToken);
 
         return Result<ShiftResponse>.Success(new ShiftResponse(
