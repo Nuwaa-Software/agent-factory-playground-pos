@@ -133,6 +133,22 @@
   },
   "productCreate": { "title": "منتج جديد" },
   "productEdit": { "title": "تعديل المنتج" },
+  "customers": {
+    "title": "العملاء",
+    "name": "الاسم",
+    "phone": "الهاتف",
+    "credit": "الرصيد",
+    "create": "عميل جديد",
+    "createTitle": "عميل جديد",
+    "editTitle": "تعديل العميل",
+    "saving": "جارٍ الحفظ…",
+    "created": "تم إنشاء العميل.",
+    "updated": "تم تحديث العميل.",
+    "notFound": "لم يتم العثور على العميل.",
+    "error": "تعذّر حفظ التغيير.",
+    "empty": "لا يوجد عملاء بعد.",
+    "loadError": "تعذّر تحميل العملاء."
+  },
   "lowstock": {
     "title": "مخزون منخفض",
     "thresholdLabel": "الحد",
