@@ -1,6 +1,6 @@
 {
   "app": { "name": "ميني بوس", "mainNav": "التنقل الرئيسي" },
-  "nav": { "products": "المنتجات", "sales": "المبيعات", "pos": "نقطة البيع", "shifts": "الوردية", "signOut": "تسجيل الخروج" },
+  "nav": { "products": "المنتجات", "sales": "المبيعات", "pos": "نقطة البيع", "shifts": "الوردية", "shiftHistory": "سجل الورديات", "signOut": "تسجيل الخروج" },
   "language": { "switchTo": "English" },
   "common": { "loading": "جارٍ التحميل…", "retry": "إعادة المحاولة" },
   "money": { "sar": "{{amount}} ر.س" },
@@ -177,5 +177,20 @@
     "error": "تعذّر حفظ الإعدادات.",
     "forbidden": "ليس لديك صلاحية تغيير الإعدادات.",
     "footerMax": "الحد الأقصى 500 حرف."
+  },
+  "shiftHistory": {
+    "title": "سجل الورديات",
+    "date": "التاريخ",
+    "status": "الحالة",
+    "expected": "النقدية المتوقعة",
+    "discrepancy": "الفرق",
+    "statusOpen": "مفتوحة",
+    "statusClosed": "مغلقة",
+    "statusAll": "الكل",
+    "statusFilter": "الحالة",
+    "filterLabel": "تصفية الورديات",
+    "empty": "لا توجد ورديات بعد.",
+    "noMatch": "لا توجد ورديات مطابقة للتصفية.",
+    "loadError": "تعذّر تحميل سجل الورديات."
   }
 }
