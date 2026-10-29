@@ -11,7 +11,7 @@ they are ready for nuwaa-pos. Conventions for agents (and humans): [AGENTS.md](A
 ```bash
 dotnet build backend/MiniPos.sln
 dotnet test  backend/MiniPos.sln          # integration tests need Docker (Testcontainers) or MINIPOS_TEST_DB
-dotnet run --project backend/src/MiniPos.Api   # needs Postgres (see appsettings.json)
+dotnet run --project backend/src/MiniPos.Api   # local Postgres: docker compose up -d
 ```
 
 Dev auth: send `X-Company-Id: <guid>` and `X-Role: Admin|Cashier|Viewer` headers.

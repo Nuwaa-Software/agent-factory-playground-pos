@@ -10,6 +10,11 @@ describe('App', () => {
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
 
+  it('redirects unauthenticated users from /products/:id/edit to sign-in', () => {
+    renderWithProviders(<App />, { route: '/products/p1/edit' });
+    expect(screen.getByRole('heading', { name: 'تسجيل الدخول (بيئة التطوير)' })).toBeInTheDocument();
+  });
+
   it('starts in Arabic, right-to-left, and switches to English', async () => {
     renderWithProviders(<App />, { route: '/sign-in' });
     expect(document.documentElement).toHaveAttribute('dir', 'rtl');
