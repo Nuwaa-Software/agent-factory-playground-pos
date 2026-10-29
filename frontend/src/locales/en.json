@@ -165,5 +165,17 @@
     "errSku": "Use uppercase letters, numbers and dashes only (e.g. ABC-123).",
     "errMoney": "Enter a valid amount (e.g. 10.50).",
     "errStock": "Enter a whole non-negative number."
+  },
+  "settings": {
+    "title": "Company settings",
+    "taxRate": "Tax rate (%)",
+    "lowStockThreshold": "Low-stock threshold",
+    "receiptFooter": "Receipt footer",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Settings saved.",
+    "error": "The settings could not be saved.",
+    "forbidden": "You do not have permission to change settings.",
+    "footerMax": "Maximum 500 characters."
   }
 }

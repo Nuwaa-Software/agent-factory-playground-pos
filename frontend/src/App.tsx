@@ -10,6 +10,7 @@ import SignInPage from './pages/SignInPage';
 import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
 import ReportsDailyPage from './pages/ReportsDailyPage';
+import SettingsPage from './pages/SettingsPage';
 import LowStockPage from './pages/LowStockPage';
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="products/new" element={<ProductCreatePage />} />
           <Route path="products/:id/edit" element={<ProductEditPage />} />
           <Route path="reports/daily" element={<ReportsDailyPage />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="low-stock" element={<LowStockPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/products" replace />} />
