@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using MiniPos.Api.Features.Shifts;
 using MiniPos.Api.Auth;
+using MiniPos.Domain.Sales;
 
 namespace MiniPos.Tests.Integration;
 
@@ -95,8 +96,9 @@ public class ShiftTests(PostgresFixture db) : ApiTestBase(db)
         
         closedShift.ClosedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
         closedShift.ActualCashHalalas.Should().Be(12000);
-        closedShift.ExpectedCashHalalas.Should().BeNull();
-        closedShift.DiscrepancyHalalas.Should().BeNull();
+        // No sales → expected = starting cash; discrepancy = actual − expected
+        closedShift.ExpectedCashHalalas.Should().Be(10000);
+        closedShift.DiscrepancyHalalas.Should().Be(2000);
     }
 
     [Fact]
@@ -302,5 +304,182 @@ public class ShiftTests(PostgresFixture db) : ApiTestBase(db)
         var response = await client2.GetAsync($"/api/pos/shifts/{shift.Id}");
         
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // ── Reconciliation: no-sales case (already covered above) ───────────────
+
+    [Fact]
+    public async Task Cash_only_sales_reconcile_correctly()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Create a product
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new MiniPos.Api.Features.Catalog.CreateProduct.CreateProductCommand(
+                "Rice", "أرز", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product = (await productResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.ProductResponse>())!;
+
+        // Open shift with starting cash 10000
+        var openResponse = await client.PostAsJsonAsync("/api/pos/shifts/open",
+            new { cashierName = "John Doe", startingCashHalalas = 10000 });
+        var shift = (await openResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Create a cash sale: 1 × 1000 = 1000 net, VAT 15% = 150, total = 1150
+        var saleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1)], PaymentType.Cash));
+        saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Close with actual cash matching expected
+        var closeResponse = await client.PatchAsJsonAsync($"/api/pos/shifts/{shift.Id}/close",
+            new { actualCashHalalas = 10000 + 1150 });
+        closeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var closedShift = (await closeResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        closedShift.ExpectedCashHalalas.Should().Be(10000 + 1150); // starting + sale total
+        closedShift.DiscrepancyHalalas.Should().Be(0);
+
+        // Verify GET /api/pos/shifts/{id} also returns reconciliation fields
+        var getResponse = await client.GetAsync($"/api/pos/shifts/{shift.Id}");
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var retrievedShift = (await getResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+        retrievedShift.ExpectedCashHalalas.Should().Be(10000 + 1150);
+        retrievedShift.DiscrepancyHalalas.Should().Be(0);
+
+        // Verify GET /api/pos/shifts?status=closed includes reconciliation fields
+        var listResponse = await client.GetAsync("/api/pos/shifts?status=closed");
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var shifts = (await listResponse.Content.ReadFromJsonAsync<List<ShiftResponse>>())!;
+        shifts.Count.Should().Be(1);
+        shifts[0].ExpectedCashHalalas.Should().Be(10000 + 1150);
+        shifts[0].DiscrepancyHalalas.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Mixed_cash_card_credit_sales_only_cash_counts()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Create a product
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new MiniPos.Api.Features.Catalog.CreateProduct.CreateProductCommand(
+                "Shirt", "قميص", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product = (await productResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.ProductResponse>())!;
+
+        // Open shift with starting cash 10000
+        var openResponse = await client.PostAsJsonAsync("/api/pos/shifts/open",
+            new { cashierName = "John Doe", startingCashHalalas = 10000 });
+        var shift = (await openResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Create a cash sale: 1 × 1000 = 1000 net, VAT 15% = 150, total = 1150
+        await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1)], PaymentType.Cash));
+
+        // Create a card sale: 1 × 1000 = 1000 net, VAT 15% = 150, total = 1150
+        await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1)], PaymentType.Card));
+
+        // Create a credit sale: 1 × 1000 = 1000 net, VAT 15% = 150, total = 1150
+        var customerResponse = await client.PostAsJsonAsync("/api/customers",
+            new MiniPos.Api.Features.Customers.CreateCustomer.CreateCustomerCommand("Ahmed", "0501234567"));
+        var customer = (await customerResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.CustomerResponse>())!;
+
+        await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1)], PaymentType.Credit, customer.Id));
+
+        // Close with actual cash matching expected (only cash sale counts)
+        var closeResponse = await client.PatchAsJsonAsync($"/api/pos/shifts/{shift.Id}/close",
+            new { actualCashHalalas = 10000 + 1150 });
+        closeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var closedShift = (await closeResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Only the cash sale's TotalHalalas (1150) counts, not card or credit
+        closedShift.ExpectedCashHalalas.Should().Be(10000 + 1150);
+        closedShift.DiscrepancyHalalas.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Voided_cash_sale_subtracts_from_expected()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Create a product
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new MiniPos.Api.Features.Catalog.CreateProduct.CreateProductCommand(
+                "Juice", "عصير", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 500, 10));
+        var product = (await productResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.ProductResponse>())!;
+
+        // Open shift with starting cash 10000
+        var openResponse = await client.PostAsJsonAsync("/api/pos/shifts/open",
+            new { cashierName = "John Doe", startingCashHalalas = 10000 });
+        var shift = (await openResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Create a cash sale: 1 × 500 = 500 net, VAT 15% = 75, total = 575
+        var saleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1)], PaymentType.Cash));
+        var sale = (await saleResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Sales.GetSale.SaleResponse>())!;
+
+        // Void the sale
+        var voidResponse = await client.PatchAsJsonAsync($"/api/pos/sales/{sale.Id}/void",
+            new { reason = "Customer changed mind" });
+        voidResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Close with actual cash matching expected (starting only, voided sale subtracts itself)
+        var closeResponse = await client.PatchAsJsonAsync($"/api/pos/shifts/{shift.Id}/close",
+            new { actualCashHalalas = 10000 });
+        closeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var closedShift = (await closeResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Expected = starting + nonVoided(0) - voided(575) = 9425
+        closedShift.ExpectedCashHalalas.Should().Be(10000 - 575);
+        // Discrepancy = actual(10000) - expected(9425) = 575
+        closedShift.DiscrepancyHalalas.Should().Be(575);
+    }
+
+    [Fact]
+    public async Task Discounted_cash_sale_uses_stored_total_halalas()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Create a product: price 1000
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new MiniPos.Api.Features.Catalog.CreateProduct.CreateProductCommand(
+                "Shirt", "قميص", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product = (await productResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.ProductResponse>())!;
+
+        // Open shift with starting cash 10000
+        var openResponse = await client.PostAsJsonAsync("/api/pos/shifts/open",
+            new { cashierName = "John Doe", startingCashHalalas = 10000 });
+        var shift = (await openResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Create a discounted cash sale: 1 × 1000, line discount 10% → net 900, VAT 15% = 135, total = 1035
+        var saleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1, new MiniPos.Api.Features.Sales.CreateSale.LineDiscountRequest(
+                    DiscountType.Percent, 10, "promo"))],
+                PaymentType.Cash));
+        saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Verify the stored TotalHalalas is 1035 (not 1150)
+        var sale = (await saleResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Sales.GetSale.SaleResponse>())!;
+        sale.TotalHalalas.Should().Be(1035);
+
+        // Close with actual cash matching expected
+        var closeResponse = await client.PatchAsJsonAsync($"/api/pos/shifts/{shift.Id}/close",
+            new { actualCashHalalas = 10000 + 1035 });
+        closeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var closedShift = (await closeResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Expected = starting + stored TotalHalalas(1035) — no double-counting of discount
+        closedShift.ExpectedCashHalalas.Should().Be(10000 + 1035);
+        closedShift.DiscrepancyHalalas.Should().Be(0);
     }
 }
