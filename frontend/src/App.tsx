@@ -12,6 +12,10 @@ import ProductEditPage from './pages/ProductEditPage';
 import ReportsDailyPage from './pages/ReportsDailyPage';
 import SettingsPage from './pages/SettingsPage';
 import LowStockPage from './pages/LowStockPage';
+import ShiftHistoryPage from './pages/ShiftHistoryPage';
+import CategoriesPage from './pages/CategoriesPage';
+import CustomersPage from './pages/CustomersPage';
+import UsersPage from './pages/UsersPage';
 
 export default function App() {
   return (
@@ -29,6 +33,10 @@ export default function App() {
           <Route path="reports/daily" element={<ReportsDailyPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="low-stock" element={<LowStockPage />} />
+          <Route path="shifts/history" element={<ShiftHistoryPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="customers" element={<CustomersPage />} />
+          <Route path="users" element={<UsersPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/products" replace />} />
       </Route>
