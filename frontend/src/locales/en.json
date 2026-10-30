@@ -131,6 +131,22 @@
     "notFound": "The sale was not found.",
     "forbidden": "You do not have permission to void sales."
   },
+  "customers": {
+    "title": "Customers",
+    "name": "Name",
+    "phone": "Phone",
+    "credit": "Credit balance",
+    "create": "New customer",
+    "createTitle": "New customer",
+    "editTitle": "Edit customer",
+    "saving": "Saving…",
+    "created": "Customer created.",
+    "updated": "Customer updated.",
+    "notFound": "The customer was not found.",
+    "error": "The change could not be saved.",
+    "empty": "No customers yet.",
+    "loadError": "The customers could not be loaded."
+  },
   "lowstock": {
     "title": "Low stock",
     "thresholdLabel": "Threshold",
