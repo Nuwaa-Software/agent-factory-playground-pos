@@ -131,6 +131,22 @@
     "notFound": "The sale was not found.",
     "forbidden": "You do not have permission to void sales."
   },
+  "customers": {
+    "title": "Customers",
+    "name": "Name",
+    "phone": "Phone",
+    "credit": "Credit balance",
+    "create": "New customer",
+    "createTitle": "New customer",
+    "editTitle": "Edit customer",
+    "saving": "Saving…",
+    "created": "Customer created.",
+    "updated": "Customer updated.",
+    "notFound": "The customer was not found.",
+    "error": "The change could not be saved.",
+    "empty": "No customers yet.",
+    "loadError": "The customers could not be loaded."
+  },
   "lowstock": {
     "title": "Low stock",
     "thresholdLabel": "Threshold",
@@ -142,6 +158,15 @@
     "price": "Price",
     "empty": "No products below the threshold.",
     "loadError": "The low-stock list could not be loaded."
+  },
+  "categories": {
+    "title": "Categories",
+    "name": "Name",
+    "description": "Description",
+    "parent": "Parent category",
+    "noParent": "— none —",
+    "empty": "No categories yet.",
+    "loadError": "The categories could not be loaded."
   },
   "productCreate": { "title": "New product" },
   "productEdit": { "title": "Edit product" },
@@ -192,5 +217,24 @@
     "empty": "No shifts yet.",
     "noMatch": "No shifts match the filters.",
     "loadError": "The shift history could not be loaded."
+  },
+  "users": {
+    "title": "Users",
+    "name": "Name",
+    "role": "Role",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "roleAdmin": "Admin",
+    "roleCashier": "Cashier",
+    "roleViewer": "Viewer",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "saving": "Saving…",
+    "updated": "User updated.",
+    "notFound": "The user was not found.",
+    "error": "The change could not be saved.",
+    "forbidden": "You do not have permission to manage users.",
+    "empty": "No users yet."
   }
 }
