@@ -22,6 +22,11 @@ const products = [
   { id: 'p1', nameEn: 'Test Product', nameAr: 'منتج تجريبي', sku: 'ABC-123', priceHalalas: 5000, stock: 100 },
 ];
 
+const categories = [
+  { id: 'c1', nameEn: 'Electronics', nameAr: 'إلكترونيات' },
+  { id: 'c2', nameEn: 'Food', nameAr: 'طعام' },
+];
+
 function renderEditPage() {
   return renderWithProviders(
     <Routes>
@@ -133,102 +138,507 @@ describe('ProductEditPage', () => {
   // ── Found: product info in Arabic ──────────────────────────────
 
   it('shows product info as read-only text in Arabic', async () => {
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
     renderEditPage();
-    await waitFor(() => screen.getByText('منتج تجريبي'));
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
     expect(screen.getByText('Test Product')).toBeInTheDocument();
     expect(screen.getByText('ABC-123')).toBeInTheDocument();
-    expect(screen.getByText('لا يمكن تعديل الاسم أو الرمز.')).toBeInTheDocument();
   });
 
   // ── Found: product info in English ─────────────────────────────
 
   it('shows product info as read-only text in English', async () => {
     await i18n.changeLanguage('en');
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
     renderEditPage();
-    await waitFor(() => screen.getByText('Test Product'));
-    expect(screen.getByText('منتج تجريبي')).toBeInTheDocument();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+    expect(screen.getByText('Test Product')).toBeInTheDocument();
     expect(screen.getByText('ABC-123')).toBeInTheDocument();
-    expect(screen.getByText('Name and SKU cannot be changed.')).toBeInTheDocument();
   });
 
-  // ── No textbox role (no inputs) in Arabic ──────────────────────
+  // ── Valid submit → apiPatch called with correct body in Arabic ─
 
-  it('has no textbox role in Arabic', async () => {
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
+  it('valid submit sends apiPatch with correct body in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'p1' });
     renderEditPage();
-    await waitFor(() => screen.getByText('منتج تجريبي'));
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-  });
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
 
-  // ── No textbox role (no inputs) in English ─────────────────────
+    // Change price and stock
+    const priceInput = screen.getByLabelText(/السعر/);
+    const stockInput = screen.getByLabelText(/المخزون/);
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '55.00');
+    await userEvent.clear(stockInput);
+    await userEvent.type(stockInput, '200');
 
-  it('has no textbox role in English', async () => {
-    await i18n.changeLanguage('en');
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
-    renderEditPage();
-    await waitFor(() => screen.getByText('Test Product'));
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-  });
+    // Submit
+    const submitBtn = screen.getByRole('button', { name: /حفظ/ });
+    await userEvent.click(submitBtn);
 
-  // ── No PATCH calls in Arabic ───────────────────────────────────
+    await waitFor(() => expect(client.apiPatch).toHaveBeenCalled());
+    const callArgs = (client.apiPatch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(callArgs[0]).toBe('/api/inventory/products/p1');
+    const body = callArgs[1] as Record<string, unknown>;
+    expect(body).toEqual({ id: 'p1', priceHalalas: 5500, stock: 200 });
+    // Verify no nameEn/sku in body
+    expect(body).not.toHaveProperty('nameEn');
+    expect(body).not.toHaveProperty('sku');
 
-  it('does not call apiPatch in Arabic', async () => {
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
-    renderEditPage();
-    await waitFor(() => screen.getByText('منتج تجريبي'));
-    expect(client.apiPatch).not.toHaveBeenCalled();
-  });
-
-  // ── No PATCH calls in English ──────────────────────────────────
-
-  it('does not call apiPatch in English', async () => {
-    await i18n.changeLanguage('en');
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
-    renderEditPage();
-    await waitFor(() => screen.getByText('Test Product'));
-    expect(client.apiPatch).not.toHaveBeenCalled();
-  });
-
-  // ── No form or save button in Arabic ───────────────────────────
-
-  it('has no form or save button in Arabic', async () => {
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
-    renderEditPage();
-    await waitFor(() => screen.getByText('منتج تجريبي'));
-    expect(screen.queryByRole('form')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'حفظ' })).not.toBeInTheDocument();
-  });
-
-  // ── No form or save button in English ──────────────────────────
-
-  it('has no form or save button in English', async () => {
-    await i18n.changeLanguage('en');
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
-    renderEditPage();
-    await waitFor(() => screen.getByText('Test Product'));
-    expect(screen.queryByRole('form')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
-  });
-
-  // ── Back to list button in Arabic ──────────────────────────────
-
-  it('shows back to list button in Arabic', async () => {
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
-    renderEditPage();
-    await waitFor(() => screen.getByText('منتج تجريبي'));
+    // Success state
+    await waitFor(() => screen.getByRole('status'));
+    expect(screen.getByRole('status')).toHaveTextContent('تم تحديث المنتج.');
     expect(screen.getByText('العودة للقائمة')).toBeInTheDocument();
   });
 
-  // ── Back to list button in English ─────────────────────────────
+  // ── Valid submit → apiPatch called with correct body in English ─
 
-  it('shows back to list button in English', async () => {
+  it('valid submit sends apiPatch with correct body in English', async () => {
     await i18n.changeLanguage('en');
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'p1' });
     renderEditPage();
-    await waitFor(() => screen.getByText('Test Product'));
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const priceInput = screen.getByLabelText(/Price/);
+    const stockInput = screen.getByLabelText(/Stock/);
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '55.00');
+    await userEvent.clear(stockInput);
+    await userEvent.type(stockInput, '200');
+
+    const submitBtn = screen.getByRole('button', { name: /Save/ });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => expect(client.apiPatch).toHaveBeenCalled());
+    const callArgs = (client.apiPatch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(callArgs[0]).toBe('/api/inventory/products/p1');
+    const body = callArgs[1] as Record<string, unknown>;
+    expect(body).toEqual({ id: 'p1', priceHalalas: 5500, stock: 200 });
+    expect(body).not.toHaveProperty('nameEn');
+    expect(body).not.toHaveProperty('sku');
+
+    await waitFor(() => screen.getByRole('status'));
+    expect(screen.getByRole('status')).toHaveTextContent('Product updated.');
     expect(screen.getByText('Back to list')).toBeInTheDocument();
+  });
+
+  // ── Invalid price shows error in Arabic ────────────────────────
+
+  it('invalid price shows errMoney with aria-invalid in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    const priceInput = screen.getByLabelText(/السعر/);
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '-5');
+
+    const submitBtn = screen.getByRole('button', { name: /حفظ/ });
+    await userEvent.click(submitBtn);
+
+    expect(screen.getByText('أدخل مبلغًا صحيحًا (مثل 10.50).')).toBeInTheDocument();
+    expect(priceInput).toHaveAttribute('aria-invalid', 'true');
+    expect(client.apiPatch).not.toHaveBeenCalled();
+  });
+
+  // ── Invalid price shows error in English ───────────────────────
+
+  it('invalid price shows errMoney with aria-invalid in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const priceInput = screen.getByLabelText(/Price/);
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '-5');
+
+    const submitBtn = screen.getByRole('button', { name: /Save/ });
+    await userEvent.click(submitBtn);
+
+    expect(screen.getByText('Enter a valid amount (e.g. 10.50).')).toBeInTheDocument();
+    expect(priceInput).toHaveAttribute('aria-invalid', 'true');
+    expect(client.apiPatch).not.toHaveBeenCalled();
+  });
+
+  // ── Invalid stock shows error in Arabic ────────────────────────
+
+  it('invalid stock shows errStock with aria-invalid in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    const stockInput = screen.getByLabelText(/المخزون/);
+    await userEvent.clear(stockInput);
+    await userEvent.type(stockInput, '-1');
+
+    const submitBtn = screen.getByRole('button', { name: /حفظ/ });
+    await userEvent.click(submitBtn);
+
+    expect(screen.getByText('أدخل عددًا صحيحًا موجبًا.')).toBeInTheDocument();
+    expect(stockInput).toHaveAttribute('aria-invalid', 'true');
+    expect(client.apiPatch).not.toHaveBeenCalled();
+  });
+
+  // ── Invalid stock shows error in English ───────────────────────
+
+  it('invalid stock shows errStock with aria-invalid in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const stockInput = screen.getByLabelText(/Stock/);
+    await userEvent.clear(stockInput);
+    await userEvent.type(stockInput, '-1');
+
+    const submitBtn = screen.getByRole('button', { name: /Save/ });
+    await userEvent.click(submitBtn);
+
+    expect(screen.getByText('Enter a whole non-negative number.')).toBeInTheDocument();
+    expect(stockInput).toHaveAttribute('aria-invalid', 'true');
+    expect(client.apiPatch).not.toHaveBeenCalled();
+  });
+
+  // ── Submit failure shows error in Arabic ───────────────────────
+
+  it('submit failure shows saveError in Arabic, inputs keep values', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockRejectedValue(new client.ApiError(500));
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    const priceInput = screen.getByLabelText(/السعر/);
+    const stockInput = screen.getByLabelText(/المخزون/);
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '55.00');
+    await userEvent.clear(stockInput);
+    await userEvent.type(stockInput, '200');
+
+    const submitBtn = screen.getByRole('button', { name: /حفظ/ });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => screen.getByRole('alert'));
+    expect(screen.getByRole('alert')).toHaveTextContent('تعذّر حفظ المنتج. حاول مرة أخرى.');
+    expect(priceInput).toHaveValue('55.00');
+    expect(stockInput).toHaveValue('200');
+  });
+
+  // ── Submit failure shows error in English ──────────────────────
+
+  it('submit failure shows saveError in English, inputs keep values', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockRejectedValue(new client.ApiError(500));
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const priceInput = screen.getByLabelText(/Price/);
+    const stockInput = screen.getByLabelText(/Stock/);
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '55.00');
+    await userEvent.clear(stockInput);
+    await userEvent.type(stockInput, '200');
+
+    const submitBtn = screen.getByRole('button', { name: /Save/ });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => screen.getByRole('alert'));
+    expect(screen.getByRole('alert')).toHaveTextContent('The product could not be saved. Try again.');
+    expect(priceInput).toHaveValue('55.00');
+    expect(stockInput).toHaveValue('200');
+  });
+
+  // ── "No category" omits categoryId in Arabic ───────────────────
+
+  it('"No category" omits categoryId in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'p1' });
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    const categorySelect = screen.getByLabelText(/التصنيف/);
+    // Default is "بدون تصنيف" (empty value)
+    expect(categorySelect).toHaveValue('');
+
+    const submitBtn = screen.getByRole('button', { name: /حفظ/ });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => expect(client.apiPatch).toHaveBeenCalled());
+    const body = (client.apiPatch as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.categoryId).toBeUndefined();
+  });
+
+  // ── "No category" omits categoryId in English ──────────────────
+
+  it('"No category" omits categoryId in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'p1' });
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const categorySelect = screen.getByLabelText(/Category/);
+    expect(categorySelect).toHaveValue('');
+
+    const submitBtn = screen.getByRole('button', { name: /Save/ });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => expect(client.apiPatch).toHaveBeenCalled());
+    const body = (client.apiPatch as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.categoryId).toBeUndefined();
+  });
+
+  // ── Selecting a category sends its id in Arabic ────────────────
+
+  it('selecting a category sends its id in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'p1' });
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    const categorySelect = screen.getByLabelText(/التصنيف/);
+    await userEvent.selectOptions(categorySelect, ['c1']);
+
+    const submitBtn = screen.getByRole('button', { name: /حفظ/ });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => expect(client.apiPatch).toHaveBeenCalled());
+    const body = (client.apiPatch as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.categoryId).toBe('c1');
+  });
+
+  // ── Selecting a category sends its id in English ───────────────
+
+  it('selecting a category sends its id in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'p1' });
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const categorySelect = screen.getByLabelText(/Category/);
+    await userEvent.selectOptions(categorySelect, ['c2']);
+
+    const submitBtn = screen.getByRole('button', { name: /Save/ });
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => expect(client.apiPatch).toHaveBeenCalled());
+    const body = (client.apiPatch as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.categoryId).toBe('c2');
+  });
+
+  // ── Structural: labels present in Arabic ───────────────────────
+
+  it('has labels for all fields in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    expect(screen.getByLabelText(/السعر/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/المخزون/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/التصنيف/)).toBeInTheDocument();
+  });
+
+  // ── Structural: labels present in English ──────────────────────
+
+  it('has labels for all fields in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    expect(screen.getByLabelText(/Price/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Stock/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Category/)).toBeInTheDocument();
+  });
+
+  // ── Structural: price and stock have dir="ltr" in Arabic ───────
+
+  it('price and stock inputs have dir="ltr" in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    const priceInput = screen.getByLabelText(/السعر/);
+    const stockInput = screen.getByLabelText(/المخزون/);
+    expect(priceInput).toHaveAttribute('dir', 'ltr');
+    expect(stockInput).toHaveAttribute('dir', 'ltr');
+  });
+
+  // ── Structural: price and stock have dir="ltr" in English ──────
+
+  it('price and stock inputs have dir="ltr" in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const priceInput = screen.getByLabelText(/Price/);
+    const stockInput = screen.getByLabelText(/Stock/);
+    expect(priceInput).toHaveAttribute('dir', 'ltr');
+    expect(stockInput).toHaveAttribute('dir', 'ltr');
+  });
+
+  // ── Structural: category is a select with "No category" option in Arabic ──
+
+  it('category is a labelled select with empty option in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    const categorySelect = screen.getByRole('combobox');
+    expect(categorySelect).toBeInTheDocument();
+    expect(screen.getByText('بدون تصنيف')).toBeInTheDocument();
+  });
+
+  // ── Structural: category is a select with "No category" option in English ──
+
+  it('category is a labelled select with empty option in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const categorySelect = screen.getByRole('combobox');
+    expect(categorySelect).toBeInTheDocument();
+    expect(screen.getByText('No category')).toBeInTheDocument();
+  });
+
+  // ── Structural: submit is teal primary and disabled while saving in Arabic ──
+
+  it('submit is teal primary and shows saving while in flight in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+
+    const priceInput = screen.getByLabelText(/السعر/);
+    const stockInput = screen.getByLabelText(/المخزون/);
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '55.00');
+    await userEvent.clear(stockInput);
+    await userEvent.type(stockInput, '200');
+
+    const submitBtn = screen.getByRole('button', { name: /حفظ/ });
+    await userEvent.click(submitBtn);
+
+    // Button should be disabled and show saving text
+    expect(screen.getByRole('button', { name: /جارٍ الحفظ…/ })).toBeDisabled();
+  });
+
+  // ── Structural: submit is teal primary and disabled while saving in English ──
+
+  it('submit is teal primary and shows saving while in flight in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    (client.apiPatch as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+
+    const priceInput = screen.getByLabelText(/Price/);
+    const stockInput = screen.getByLabelText(/Stock/);
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '55.00');
+    await userEvent.clear(stockInput);
+    await userEvent.type(stockInput, '200');
+
+    const submitBtn = screen.getByRole('button', { name: /Save/ });
+    await userEvent.click(submitBtn);
+
+    expect(screen.getByRole('button', { name: /Saving…/ })).toBeDisabled();
+  });
+
+  // ── axe in Arabic ──────────────────────────────────────────────
+
+  it('axe passes in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    const container = renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+    expect(await axe(container.container)).toHaveNoViolations();
+  });
+
+  // ── axe in English ─────────────────────────────────────────────
+
+  it('axe passes in English', async () => {
+    await i18n.changeLanguage('en');
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    const container = renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+    expect(await axe(container.container)).toHaveNoViolations();
   });
 
   // ── Categories failure does not break the page in Arabic ───────
@@ -238,27 +648,32 @@ describe('ProductEditPage', () => {
       throw new client.ApiError(500);
     });
     renderEditPage();
-    // Should still show loading, then error for products list
     await waitFor(() => screen.getByRole('alert'));
     expect(screen.getByRole('alert')).toHaveTextContent('تعذّر تحميل المنتجات.');
   });
 
-  // ── axe in Arabic ──────────────────────────────────────────────
+  // ── Does not call apiPatch on initial render in Arabic ─────────
 
-  it('axe passes in Arabic', async () => {
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
-    const container = renderEditPage();
-    await waitFor(() => screen.getByText('منتج تجريبي'));
-    expect(await axe(container.container)).toHaveNoViolations();
+  it('does not call apiPatch on initial render in Arabic', async () => {
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('لا يمكن تعديل الاسم أو الرمز.'));
+    expect(client.apiPatch).not.toHaveBeenCalled();
   });
 
-  // ── axe in English ─────────────────────────────────────────────
+  // ── Does not call apiPatch on initial render in English ────────
 
-  it('axe passes in English', async () => {
+  it('does not call apiPatch on initial render in English', async () => {
     await i18n.changeLanguage('en');
-    (client.apiGet as ReturnType<typeof vi.fn>).mockResolvedValue(products);
-    const container = renderEditPage();
-    await waitFor(() => screen.getByText('Test Product'));
-    expect(await axe(container.container)).toHaveNoViolations();
+    (client.apiGet as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) => {
+      if (url === '/api/inventory/products') return products;
+      return categories;
+    });
+    renderEditPage();
+    await waitFor(() => screen.getByText('Name and SKU cannot be changed.'));
+    expect(client.apiPatch).not.toHaveBeenCalled();
   });
 });
