@@ -13,6 +13,7 @@ import ReportsDailyPage from './pages/ReportsDailyPage';
 import SettingsPage from './pages/SettingsPage';
 import LowStockPage from './pages/LowStockPage';
 import CustomersPage from './pages/CustomersPage';
+import UsersPage from './pages/UsersPage';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="low-stock" element={<LowStockPage />} />
           <Route path="customers" element={<CustomersPage />} />
+          <Route path="users" element={<UsersPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/products" replace />} />
       </Route>

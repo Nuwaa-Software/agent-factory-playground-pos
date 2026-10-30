@@ -193,5 +193,24 @@
     "error": "The settings could not be saved.",
     "forbidden": "You do not have permission to change settings.",
     "footerMax": "Maximum 500 characters."
+  },
+  "users": {
+    "title": "Users",
+    "name": "Name",
+    "role": "Role",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "roleAdmin": "Admin",
+    "roleCashier": "Cashier",
+    "roleViewer": "Viewer",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "saving": "Saving…",
+    "updated": "User updated.",
+    "notFound": "The user was not found.",
+    "error": "The change could not be saved.",
+    "forbidden": "You do not have permission to manage users.",
+    "empty": "No users yet."
   }
 }
