@@ -1,6 +1,6 @@
 {
   "app": { "name": "MiniPos", "mainNav": "Main navigation" },
-  "nav": { "products": "Products", "sales": "Sales", "pos": "POS", "shifts": "Shift", "signOut": "Sign out" },
+  "nav": { "products": "Products", "sales": "Sales", "pos": "POS", "shifts": "Shift", "shiftHistory": "Shift history", "signOut": "Sign out" },
   "language": { "switchTo": "العربية" },
   "common": { "loading": "Loading…", "retry": "Try again" },
   "money": { "sar": "SAR {{amount}}" },
@@ -202,6 +202,21 @@
     "error": "The settings could not be saved.",
     "forbidden": "You do not have permission to change settings.",
     "footerMax": "Maximum 500 characters."
+  },
+  "shiftHistory": {
+    "title": "Shift history",
+    "date": "Date",
+    "status": "Status",
+    "expected": "Expected cash",
+    "discrepancy": "Discrepancy",
+    "statusOpen": "Open",
+    "statusClosed": "Closed",
+    "statusAll": "All",
+    "statusFilter": "Status",
+    "filterLabel": "Filter shifts",
+    "empty": "No shifts yet.",
+    "noMatch": "No shifts match the filters.",
+    "loadError": "The shift history could not be loaded."
   },
   "users": {
     "title": "Users",
