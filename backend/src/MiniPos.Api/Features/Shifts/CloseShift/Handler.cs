@@ -28,7 +28,8 @@ public sealed class CloseShiftHandler(AppDbContext db, TimeProvider clock) : IRe
         shift.ClosedAt = clock.GetUtcNow();
         shift.ActualCashHalalas = command.ActualCashHalalas;
 
-        // Compute expected cash from cash sales in the shift window.
+        // Compute expected cash from non-voided cash sales in the shift window.
+        // Voided sales are excluded (cash returned to customer, never in the drawer).
         // TotalHalalas already reflects discounts and VAT, so we use it directly.
         var salesInWindow = await db.Sales
             .Where(s => s.CreatedAt >= shift.OpenedAt && s.CreatedAt <= shift.ClosedAt.Value
@@ -36,9 +37,8 @@ public sealed class CloseShiftHandler(AppDbContext db, TimeProvider clock) : IRe
             .ToListAsync(cancellationToken);
 
         var nonVoidedCashTotal = salesInWindow.Where(s => !s.Voided).Sum(s => (long?)s.TotalHalalas) ?? 0;
-        var voidedCashTotal = salesInWindow.Where(s => s.Voided).Sum(s => (long?)s.TotalHalalas) ?? 0;
 
-        shift.ExpectedCashHalalas = shift.StartingCashHalalas + nonVoidedCashTotal - voidedCashTotal;
+        shift.ExpectedCashHalalas = shift.StartingCashHalalas + nonVoidedCashTotal;
         shift.DiscrepancyHalalas = command.ActualCashHalalas - shift.ExpectedCashHalalas;
 
         await db.SaveChangesAsync(cancellationToken);
