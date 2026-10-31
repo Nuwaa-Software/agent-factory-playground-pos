@@ -404,7 +404,7 @@ public class ShiftTests(PostgresFixture db) : ApiTestBase(db)
     }
 
     [Fact]
-    public async Task Voided_cash_sale_subtracts_from_expected()
+    public async Task Voided_cash_sale_is_excluded_from_expected()
     {
         var company = await Factory.CreateCompanyAsync();
         var client = Factory.ClientFor(company);
@@ -431,16 +431,120 @@ public class ShiftTests(PostgresFixture db) : ApiTestBase(db)
             new { reason = "Customer changed mind" });
         voidResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Close with actual cash matching expected (starting only, voided sale subtracts itself)
+        // Close with actual cash matching expected (starting only, voided sale excluded)
         var closeResponse = await client.PatchAsJsonAsync($"/api/pos/shifts/{shift.Id}/close",
             new { actualCashHalalas = 10000 });
         closeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var closedShift = (await closeResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
 
-        // Expected = starting + nonVoided(0) - voided(575) = 9425
-        closedShift.ExpectedCashHalalas.Should().Be(10000 - 575);
-        // Discrepancy = actual(10000) - expected(9425) = 575
-        closedShift.DiscrepancyHalalas.Should().Be(575);
+        // Expected = starting + nonVoided(0) = 10000 (voided sale excluded)
+        closedShift.ExpectedCashHalalas.Should().Be(10000);
+        // Discrepancy = actual(10000) - expected(10000) = 0
+        closedShift.DiscrepancyHalalas.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Voided_second_cash_sale_is_excluded_from_expected()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Create a product
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new MiniPos.Api.Features.Catalog.CreateProduct.CreateProductCommand(
+                "Juice", "عصير", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 500, 10));
+        var product = (await productResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.ProductResponse>())!;
+
+        // Open shift with starting cash 10000
+        var openResponse = await client.PostAsJsonAsync("/api/pos/shifts/open",
+            new { cashierName = "John Doe", startingCashHalalas = 10000 });
+        var shift = (await openResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // First cash sale: 1 × 500 = 500 net, VAT 15% = 75, total = 575
+        var sale1Response = await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1)], PaymentType.Cash));
+        var sale1 = (await sale1Response.Content.ReadFromJsonAsync<MiniPos.Api.Features.Sales.GetSale.SaleResponse>())!;
+
+        // Second cash sale: 1 × 1000 = 1000 net, VAT 15% = 150, total = 1150
+        var product2Response = await client.PostAsJsonAsync("/api/inventory/products",
+            new MiniPos.Api.Features.Catalog.CreateProduct.CreateProductCommand(
+                "Water", "ماء", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product2 = (await product2Response.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.ProductResponse>())!;
+
+        var sale2Response = await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product2.Id, 1)], PaymentType.Cash));
+        var sale2 = (await sale2Response.Content.ReadFromJsonAsync<MiniPos.Api.Features.Sales.GetSale.SaleResponse>())!;
+
+        // Void the second sale only
+        var voidResponse = await client.PatchAsJsonAsync($"/api/pos/sales/{sale2.Id}/void",
+            new { reason = "Customer changed mind" });
+        voidResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Close with actual cash matching expected (starting + first sale only)
+        var closeResponse = await client.PatchAsJsonAsync($"/api/pos/shifts/{shift.Id}/close",
+            new { actualCashHalalas = 10575 });
+        closeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var closedShift = (await closeResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Expected = starting + nonVoided(575) = 10575 (second sale excluded)
+        closedShift.ExpectedCashHalalas.Should().Be(10575);
+        // Discrepancy = actual(10575) - expected(10575) = 0
+        closedShift.DiscrepancyHalalas.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Voided_card_and_credit_sales_have_no_effect_on_expected_cash()
+    {
+        var company = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(company);
+
+        // Create a product
+        var productResponse = await client.PostAsJsonAsync("/api/inventory/products",
+            new MiniPos.Api.Features.Catalog.CreateProduct.CreateProductCommand(
+                "Shirt", "قميص", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product = (await productResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.ProductResponse>())!;
+
+        // Open shift with starting cash 10000
+        var openResponse = await client.PostAsJsonAsync("/api/pos/shifts/open",
+            new { cashierName = "John Doe", startingCashHalalas = 10000 });
+        var shift = (await openResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Create a card sale: 1 × 1000 = 1000 net, VAT 15% = 150, total = 1150
+        var cardSaleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1)], PaymentType.Card));
+        var cardSale = (await cardSaleResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Sales.GetSale.SaleResponse>())!;
+
+        // Void the card sale
+        await client.PatchAsJsonAsync($"/api/pos/sales/{cardSale.Id}/void",
+            new { reason = "Customer changed mind" });
+
+        // Create a credit sale: 1 × 1000 = 1000 net, VAT 15% = 150, total = 1150
+        var customerResponse = await client.PostAsJsonAsync("/api/customers",
+            new MiniPos.Api.Features.Customers.CreateCustomer.CreateCustomerCommand("Ahmed", "0501234567"));
+        var customer = (await customerResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Common.CustomerResponse>())!;
+
+        var creditSaleResponse = await client.PostAsJsonAsync("/api/pos/sales",
+            new MiniPos.Api.Features.Sales.CreateSale.CreateSaleCommand(
+                [new(product.Id, 1)], PaymentType.Credit, customer.Id));
+        var creditSale = (await creditSaleResponse.Content.ReadFromJsonAsync<MiniPos.Api.Features.Sales.GetSale.SaleResponse>())!;
+
+        // Void the credit sale
+        await client.PatchAsJsonAsync($"/api/pos/sales/{creditSale.Id}/void",
+            new { reason = "Customer changed mind" });
+
+        // Close with actual cash matching expected (starting only, no cash sales)
+        var closeResponse = await client.PatchAsJsonAsync($"/api/pos/shifts/{shift.Id}/close",
+            new { actualCashHalalas = 10000 });
+        closeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var closedShift = (await closeResponse.Content.ReadFromJsonAsync<ShiftResponse>())!;
+
+        // Expected = starting + nonVoided(0) = 10000 (voided card/credit excluded)
+        closedShift.ExpectedCashHalalas.Should().Be(10000);
+        // Discrepancy = actual(10000) - expected(10000) = 0
+        closedShift.DiscrepancyHalalas.Should().Be(0);
     }
 
     [Fact]
