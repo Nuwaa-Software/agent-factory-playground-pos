@@ -166,7 +166,14 @@
     "parent": "Parent category",
     "noParent": "— none —",
     "empty": "No categories yet.",
-    "loadError": "The categories could not be loaded."
+    "loadError": "The categories could not be loaded.",
+    "create": "Create category",
+    "createTitle": "New category",
+    "saving": "Saving…",
+    "created": "Category created.",
+    "error": "The change could not be saved.",
+    "nameEn": "Name (English)",
+    "nameAr": "Name (Arabic)"
   },
   "productCreate": { "title": "New product" },
   "productEdit": { "title": "Edit product" },
