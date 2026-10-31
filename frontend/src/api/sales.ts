@@ -23,6 +23,13 @@ export interface SalesListResponse {
   totalPages: number;
 }
 
+/** Discount type sent to the API: 0 = percent, 1 = fixed. */
+export interface DiscountRequest {
+  type: number; // 0=percent, 1=fixed
+  value: number;
+  reason: string;
+}
+
 /** `SaleResponse` of the API (backend/src/MiniPos.Api/Features/Sales/CreateSale/Response.cs). */
 export interface SaleResponse {
   id: string;
@@ -35,10 +42,14 @@ export interface SaleResponse {
     quantity: number;
     unitPriceHalalas: number;
     lineNetHalalas: number;
+    discountHalalas?: number;
+    discountReason?: string | null;
   }>;
   netHalalas: number;
   vatHalalas: number;
   totalHalalas: number;
+  saleDiscountHalalas?: number;
+  saleDiscountReason?: string | null;
   qrCode: string;
   voided: boolean;
   voidedAt: string | null;
@@ -47,9 +58,10 @@ export interface SaleResponse {
 }
 
 export interface CreateSaleRequest {
-  lines: Array<{ productId: string; quantity: number }>;
+  lines: Array<{ productId: string; quantity: number; discount?: DiscountRequest }>;
   paymentType?: number;
   customerId?: string;
+  saleDiscount?: DiscountRequest;
 }
 
 export function useSales(page: number, from?: string, to?: string) {

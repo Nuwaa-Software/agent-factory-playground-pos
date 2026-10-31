@@ -79,6 +79,24 @@
     "viewReceipt": "View receipt",
     "newSale": "New sale"
   },
+  "discount": {
+    "saleDiscount": "Sale discount",
+    "lineDiscount": "Line discount",
+    "type": "Type",
+    "percent": "Percent",
+    "fixed": "Fixed (SAR)",
+    "value": "Value",
+    "reason": "Reason",
+    "reasonPlaceholder": "e.g. loyalty, promo, goodwill",
+    "reasonRequired": "A reason is required.",
+    "apply": "Apply",
+    "remove": "Remove",
+    "exceedsLimits": "The discount exceeds the allowed limit.",
+    "valueMustBePositive": "The discount value must be positive.",
+    "invalid": "The discount is invalid.",
+    "applied": "Discount applied.",
+    "discountLabel": "Discount"
+  },
   "report": {
     "title": "Daily sales report",
     "dateLabel": "Date",

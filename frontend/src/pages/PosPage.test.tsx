@@ -348,4 +348,251 @@ describe('PosPage', () => {
     const { container } = renderWithProviders(<PosPage />, { route: '/pos' });
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  // ---- Discount tests ----
+
+  it('request body shape (sale discount, percent): type is number 0', async () => {
+    await i18n.changeLanguage('en');
+    const fetchMock = stubSearchAndSale(PRODUCTS, SALE_RESPONSE);
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const productBtn = await addProductViaSearch('en');
+    await userEvent.click(productBtn);
+
+    // Open sale discount form
+    const saleDiscountToggle = screen.getByRole('button', { name: /Sale discount/ });
+    await userEvent.click(saleDiscountToggle);
+
+    // Select percent (default)
+    await userEvent.click(screen.getByRole('radio', { name: 'Percent' }));
+
+    // Type value and reason
+    const valueInput = screen.getByLabelText('Value');
+    await userEvent.clear(valueInput);
+    await userEvent.type(valueInput, '10');
+    const reasonInput = screen.getByLabelText('Reason');
+    await userEvent.clear(reasonInput);
+    await userEvent.type(reasonInput, 'loyalty promo');
+
+    // Click Apply
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    // Submit
+    await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
+    expect(await screen.findByText('Sale completed')).toBeInTheDocument();
+
+    const call = fetchMock.mock.calls[1]!;
+    const body = JSON.parse(call[1]!.body as string);
+    expect(body.saleDiscount).toEqual({ type: 0, value: 10, reason: 'loyalty promo' });
+    expect(typeof body.saleDiscount.type).toBe('number');
+  });
+
+  it('request body shape (line discount, fixed): value in halalas', async () => {
+    await i18n.changeLanguage('en');
+    const fetchMock = stubSearchAndSale(PRODUCTS, SALE_RESPONSE);
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const productBtn = await addProductViaSearch('en');
+    await userEvent.click(productBtn);
+
+    // Open line discount form
+    const lineDiscountToggle = screen.getByRole('button', { name: /Line discount/ });
+    await userEvent.click(lineDiscountToggle);
+
+    // Select fixed
+    await userEvent.click(screen.getByRole('radio', { name: 'Fixed (SAR)' }));
+
+    // Type value and reason
+    const valueInput = screen.getByLabelText('Value');
+    await userEvent.clear(valueInput);
+    await userEvent.type(valueInput, '5.00');
+    const reasonInput = screen.getByLabelText('Reason');
+    await userEvent.clear(reasonInput);
+    await userEvent.type(reasonInput, 'goodwill');
+
+    // Click Apply
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    // Submit
+    await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
+    expect(await screen.findByText('Sale completed')).toBeInTheDocument();
+
+    const call = fetchMock.mock.calls[1]!;
+    const body = JSON.parse(call[1]!.body as string);
+    expect(body.lines[0].discount).toEqual({ type: 1, value: 500, reason: 'goodwill' });
+  });
+
+  it('empty reason → validation error and no fetch', async () => {
+    await i18n.changeLanguage('en');
+    const fetchMock = stubSearchAndSale(PRODUCTS, SALE_RESPONSE);
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const productBtn = await addProductViaSearch('en');
+    await userEvent.click(productBtn);
+
+    // Open sale discount form
+    const saleDiscountToggle = screen.getByRole('button', { name: /Sale discount/ });
+    await userEvent.click(saleDiscountToggle);
+
+    // Type value only, leave reason empty
+    const valueInput = screen.getByLabelText('Value');
+    await userEvent.clear(valueInput);
+    await userEvent.type(valueInput, '10');
+
+    // Click Apply
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    // Validation error shown
+    expect(await screen.findByText('A reason is required.')).toBeInTheDocument();
+
+    // fetch was NOT called for POST (only the search call)
+    const postCalls = fetchMock.mock.calls.filter(c => typeof c[0] === 'string' && c[0].includes('/api/pos/sales'));
+    expect(postCalls.length).toBe(0);
+  });
+
+  it('400 discount.exceeds_limits → shows exceedsLimits message', async () => {
+    await i18n.changeLanguage('en');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (typeof url === 'string' && url.includes('/api/inventory/products')) {
+        return new Response(JSON.stringify(PRODUCTS), { status: 200 });
+      }
+      return new Response(JSON.stringify({ title: 'discount.exceeds_limits' }), { status: 400 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const productBtn = await addProductViaSearch('en');
+    await userEvent.click(productBtn);
+
+    // Open sale discount form, apply a discount
+    const saleDiscountToggle = screen.getByRole('button', { name: /Sale discount/ });
+    await userEvent.click(saleDiscountToggle);
+    const valueInput = screen.getByLabelText('Value');
+    await userEvent.clear(valueInput);
+    await userEvent.type(valueInput, '10');
+    const reasonInput = screen.getByLabelText('Reason');
+    await userEvent.clear(reasonInput);
+    await userEvent.type(reasonInput, 'promo');
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    // Submit
+    await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
+    expect(await screen.findByText('The discount exceeds the allowed limit.')).toBeInTheDocument();
+  });
+
+  it('400 discount.value_must_be_positive → shows valueMustBePositive message', async () => {
+    await i18n.changeLanguage('en');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (typeof url === 'string' && url.includes('/api/inventory/products')) {
+        return new Response(JSON.stringify(PRODUCTS), { status: 200 });
+      }
+      return new Response(JSON.stringify({ title: 'discount.value_must_be_positive' }), { status: 400 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const productBtn = await addProductViaSearch('en');
+    await userEvent.click(productBtn);
+
+    // Open sale discount form, apply a discount
+    const saleDiscountToggle = screen.getByRole('button', { name: /Sale discount/ });
+    await userEvent.click(saleDiscountToggle);
+    const valueInput = screen.getByLabelText('Value');
+    await userEvent.clear(valueInput);
+    await userEvent.type(valueInput, '10');
+    const reasonInput = screen.getByLabelText('Reason');
+    await userEvent.clear(reasonInput);
+    await userEvent.type(reasonInput, 'promo');
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    // Submit
+    await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
+    expect(await screen.findByText('The discount value must be positive.')).toBeInTheDocument();
+  });
+
+  it('live totals reflect a 10% sale discount on price 1000 × 1', async () => {
+    await i18n.changeLanguage('en');
+    const products: Product[] = [
+      { id: 'p1', nameEn: 'Test item', nameAr: 'عنصر اختبار', sku: 'TST-1', priceHalalas: 1000, stock: 10 },
+    ];
+    stubFetch(products);
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const input = screen.getByLabelText('Search product');
+    await userEvent.type(input, 'test');
+    await userEvent.click(screen.getByRole('button', { name: 'Search' }));
+    const productBtn = await screen.findByText('Test item');
+    await userEvent.click(productBtn);
+
+    // Apply 10% sale discount
+    const saleDiscountToggle = screen.getByRole('button', { name: /Sale discount/ });
+    await userEvent.click(saleDiscountToggle);
+    const valueInput = screen.getByLabelText('Value');
+    await userEvent.clear(valueInput);
+    await userEvent.type(valueInput, '10');
+    const reasonInput = screen.getByLabelText('Reason');
+    await userEvent.clear(reasonInput);
+    await userEvent.type(reasonInput, 'promo');
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    // Net = 1000 - 100 (10% of 1000) = 900 → 9.00
+    expect(screen.getByText('9.00')).toBeInTheDocument();
+    // VAT = Math.floor((900*15+50)/100) = Math.floor(13550/100) = 135 → 1.35
+    const vatValues = screen.getAllByText('1.35');
+    expect(vatValues[0]).toBeInTheDocument();
+    // Total = 900 + 135 = 1035 → 10.35
+    const totalValues = screen.getAllByText('10.35');
+    expect(totalValues[0]).toBeInTheDocument();
+  });
+
+  it('success view shows saleDiscountHalalas when > 0', async () => {
+    await i18n.changeLanguage('en');
+    const responseWithDiscount = {
+      ...SALE_RESPONSE,
+      saleDiscountHalalas: 100,
+      saleDiscountReason: 'promo',
+    };
+    stubSearchAndSale(PRODUCTS, responseWithDiscount);
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const productBtn = await addProductViaSearch('en');
+    await userEvent.click(productBtn);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
+    expect(await screen.findByText('Sale completed')).toBeInTheDocument();
+    // Sale discount line should appear
+    expect(screen.getByText(/Sale discount:/)).toBeInTheDocument();
+    expect(screen.getByText('-1.00')).toBeInTheDocument();
+  });
+
+  it('bilingual: Arabic discount form labels', async () => {
+    await i18n.changeLanguage('ar');
+    stubFetch(PRODUCTS);
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const productBtn = await addProductViaSearch('ar');
+    await userEvent.click(productBtn);
+
+    // Open sale discount form
+    const saleDiscountToggle = screen.getByRole('button', { name: /خصم العملية/ });
+    await userEvent.click(saleDiscountToggle);
+
+    // Check labels exist
+    expect(screen.getByText('النوع')).toBeInTheDocument();
+    expect(screen.getByText('السبب')).toBeInTheDocument();
+    expect(screen.getByText('تطبيق')).toBeInTheDocument();
+  });
+
+  it('bilingual: English discount form labels', async () => {
+    await i18n.changeLanguage('en');
+    stubFetch(PRODUCTS);
+    renderWithProviders(<PosPage />, { route: '/pos' });
+    const productBtn = await addProductViaSearch('en');
+    await userEvent.click(productBtn);
+
+    // Open sale discount form
+    const saleDiscountToggle = screen.getByRole('button', { name: /Sale discount/ });
+    await userEvent.click(saleDiscountToggle);
+
+    // Check labels exist
+    expect(screen.getByText('Type')).toBeInTheDocument();
+    expect(screen.getByText('Reason')).toBeInTheDocument();
+    expect(screen.getByText('Apply')).toBeInTheDocument();
+  });
 });

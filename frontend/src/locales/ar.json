@@ -79,6 +79,24 @@
     "viewReceipt": "عرض الإيصال",
     "newSale": "عملية جديدة"
   },
+  "discount": {
+    "saleDiscount": "خصم العملية",
+    "lineDiscount": "خصم السطر",
+    "type": "النوع",
+    "percent": "نسبة مئوية",
+    "fixed": "مبلغ (ر.س)",
+    "value": "القيمة",
+    "reason": "السبب",
+    "reasonPlaceholder": "مثال: ولاء، عرض، حسن نية",
+    "reasonRequired": "السبب مطلوب.",
+    "apply": "تطبيق",
+    "remove": "إزالة",
+    "exceedsLimits": "الخصم يتجاوز الحد المسموح.",
+    "valueMustBePositive": "قيمة الخصم يجب أن تكون موجبة.",
+    "invalid": "الخصم غير صالح.",
+    "applied": "تم تطبيق الخصم.",
+    "discountLabel": "الخصم"
+  },
   "report": {
     "title": "تقرير المبيعات اليومي",
     "dateLabel": "التاريخ",
