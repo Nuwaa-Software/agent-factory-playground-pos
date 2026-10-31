@@ -19,19 +19,69 @@ public class DiscountIntegrationTests(PostgresFixture db) : ApiTestBase(db)
         return (client, (await response.Content.ReadFromJsonAsync<ProductResponse>())!);
     }
 
-    // ── Authorization: non-admin gets 403 when discount is present ──────────
+    // ── Authorization: Cashier may now apply discounts ───────────────────────
 
     [Fact]
-    public async Task Cashier_with_discount_gets_403()
+    public async Task Cashier_with_line_discount_succeeds()
     {
-        var (client, product) = await ShopWithProductAsync();
-        var cashierClient = Factory.ClientFor(await Factory.CreateCompanyAsync(), "Cashier");
+        var companyId = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(companyId);
 
-        var response = await cashierClient.PostAsJsonAsync("/api/pos/sales",
+        // Create product using Admin client
+        var response = await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product = (await response.Content.ReadFromJsonAsync<ProductResponse>())!;
+
+        // Now use Cashier client for the same company
+        var cashierClient = Factory.ClientFor(companyId, "Cashier");
+
+        var saleResponse = await cashierClient.PostAsJsonAsync("/api/pos/sales",
             new CreateSaleCommand(
                 [new(product.Id, 1, new LineDiscountRequest(DiscountType.Percent, 10, "damaged"))]));
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task Cashier_with_sale_discount_succeeds()
+    {
+        var companyId = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(companyId);
+
+        // Create product using Admin client
+        var response = await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product = (await response.Content.ReadFromJsonAsync<ProductResponse>())!;
+
+        // Now use Cashier client for the same company
+        var cashierClient = Factory.ClientFor(companyId, "Cashier");
+
+        var saleResponse = await cashierClient.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand(
+                [new(product.Id, 2)],
+                SaleDiscount: new SaleDiscountRequest(DiscountType.Percent, 5, "loyal")));
+
+        saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task Cashier_without_discount_succeeds()
+    {
+        var companyId = await Factory.CreateCompanyAsync();
+        var client = Factory.ClientFor(companyId);
+
+        // Create product using Admin client
+        var response = await client.PostAsJsonAsync("/api/inventory/products",
+            new CreateProductCommand("Shirt", "قميص", $"SKU-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), 1000, 10));
+        var product = (await response.Content.ReadFromJsonAsync<ProductResponse>())!;
+
+        // Now use Cashier client for the same company
+        var cashierClient = Factory.ClientFor(companyId, "Cashier");
+
+        var saleResponse = await cashierClient.PostAsJsonAsync("/api/pos/sales",
+            new CreateSaleCommand([new(product.Id, 1)]));
+
+        saleResponse.StatusCode.Should().Be(HttpStatusCode.Created);
     }
 
     [Fact]

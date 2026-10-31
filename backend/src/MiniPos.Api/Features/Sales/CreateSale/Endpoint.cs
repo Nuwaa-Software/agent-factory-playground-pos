@@ -13,10 +13,10 @@ public static class Endpoint
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapPost("/api/pos/sales", async (CreateSaleCommand command, HttpContext httpContext, ISender sender, CancellationToken ct) =>
         {
-            // Admin-only check for discounts: if any discount is present and the user is not admin, reject with 403
+            // Admin or Cashier may apply discounts: if any discount is present and the user is neither, reject with 403
             var role = httpContext.User.FindFirstValue(ClaimTypes.Role);
             bool hasDiscount = command.Lines.Any(l => l.Discount is not null) || command.SaleDiscount is not null;
-            if (hasDiscount && role != Roles.Admin)
+            if (hasDiscount && role is not (Roles.Admin or Roles.Cashier))
             {
                 return Results.Forbid();
             }
