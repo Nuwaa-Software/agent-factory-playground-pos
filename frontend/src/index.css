@@ -1,1 +1,17 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-primary: var(--color-teal-700);
+  --color-primary-hover: var(--color-teal-800);
+  --radius-lg: 0.5rem;
+  --spacing-scale: 4px;
+}
+
+body {
+  font-family: system-ui, 'Segoe UI', Tahoma, 'Noto Sans Arabic', sans-serif;
+  @apply bg-slate-50;
+}
+
+:focus-visible {
+  @apply ring-2 ring-teal-500 outline-none;
+}

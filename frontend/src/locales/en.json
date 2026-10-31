@@ -243,5 +243,16 @@
     "error": "The change could not be saved.",
     "forbidden": "You do not have permission to manage users.",
     "empty": "No users yet."
+  },
+  "ui": {
+    "close": "Close",
+    "emptyState": "No data.",
+    "errorState": "An error occurred.",
+    "loadingState": "Loading…",
+    "retry": "Retry",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "filters": "Filters",
+    "pagination": "Pagination"
   }
 }
